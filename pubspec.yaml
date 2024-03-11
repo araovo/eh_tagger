@@ -1,0 +1,46 @@
+name: eh_tagger
+description: "A tagger for E-Hentai galleries, written in Flutter."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  google_fonts: ^6.2.1
+  intl: ^0.18.1
+  get: ^4.6.6
+  dio: ^5.4.1
+  dio_smart_retry: ^6.0.0
+  html_unescape: ^2.0.0
+  json_annotation: ^4.8.1
+  json_serializable: ^6.7.1
+  path: ^1.9.0
+  path_provider: ^2.1.2
+  window_manager: ^0.3.8
+  sqflite_common_ffi: ^2.3.2+1
+  file_picker: ^6.1.1
+  archive: ^3.4.10
+  pub_semver: ^2.1.4
+  uuid: ^4.3.3
+  xml: ^6.5.0
+  desktop_drop: ^0.4.4
+  cross_file: ^0.3.4+1
+  background_downloader: ^8.2.1
+  url_launcher: ^6.2.5
+
+dev_dependencies:
+  flutter_test:
+    sdk:
+      flutter
+  build_runner: ^2.4.8
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

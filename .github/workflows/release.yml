@@ -1,0 +1,112 @@
+name: Flutter Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+'
+
+jobs:
+  build-and-release-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.19.2'
+      - name: Install dependencies
+        run: sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - name: Install project dependencies
+        run: flutter pub get
+      - name: Generate intermediates
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Enable linux build
+        run: flutter config --enable-linux-desktop
+      - name: Build artifacts
+        run: flutter build linux --release
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          filename: eh-tagger-${{github.ref_name}}-linux.zip
+          directory: build/linux/x64/release/bundle
+      - name: Linux Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: build/linux/x64/release/bundle/eh-tagger-${{github.ref_name}}-linux.zip
+
+
+  build-and-release-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.19.2'
+      - name: Install project dependencies
+        run: flutter pub get
+      - name: Generate intermediates
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Enable windows build
+        run: flutter config --enable-windows-desktop
+      - name: Build artifacts
+        run: flutter build windows --release
+      - name: Download SQLite3
+        run: |
+          curl -L https://www.sqlite.org/2024/sqlite-dll-win-x64-3450100.zip -o sqlite3.zip
+          tar -xf sqlite3.zip
+          mv sqlite3.dll build/windows/x64/runner/Release
+      - name: Copy VC redistributable to release
+        run: | 
+          Copy-Item (vswhere -latest -find 'VC\Redist\MSVC\*\x64\*\msvcp140.dll') -Destination build/windows/x64/runner/Release
+          Copy-Item (vswhere -latest -find 'VC\Redist\MSVC\*\x64\*\vcruntime140.dll') -Destination build/windows/x64/runner/Release
+          Copy-Item (vswhere -latest -find 'VC\Redist\MSVC\*\x64\*\vcruntime140_1.dll') -Destination build/windows/x64/runner/Release
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          filename: eh-tagger-${{github.ref_name}}-windows.zip
+          directory: build/windows/x64/runner/Release
+      - name: Windows Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: build/windows/x64/runner/Release/eh-tagger-${{github.ref_name}}-windows.zip
+
+
+  build-and-release-macos:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.19.2'
+      - name: Install project dependencies
+        run: flutter pub get
+      - name: Generate intermediates
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Enable macOS build
+        run: flutter config --enable-macos-desktop
+      - name: Build artifacts
+        run: flutter build macos --release
+      - name: Archive Release
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -qroy eh-tagger-${{github.ref_name}}-macos.zip eh_tagger.app
+      - name: macOS Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: build/macos/Build/Products/Release/eh-tagger-${{github.ref_name}}-macos.zip
