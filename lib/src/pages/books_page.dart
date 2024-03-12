@@ -294,8 +294,7 @@ class _BooksPageState extends State<BooksPage> {
       context: context,
       builder: (context) => const DialogInputUrls(),
     );
-    if (urls == null) return;
-    if (urls.isEmpty) {
+    if (urls == null || urls.isEmpty) {
       return;
     }
 
@@ -1000,6 +999,33 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
+  Widget buildStatusBar() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, right: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Divider(
+            height: 0,
+            color: Colors.grey,
+          ),
+          Row(children: [
+            if (_multiSelectedBookId.isNotEmpty) ...[
+              Text(
+                AppLocalizations.of(context)!
+                    .booksSelected(_multiSelectedBookId.length, _books.length),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ] else ...[
+              Text(AppLocalizations.of(context)!.totalBooks(_books.length),
+                  style: Theme.of(context).textTheme.labelSmall),
+            ]
+          ])
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1015,6 +1041,7 @@ class _BooksPageState extends State<BooksPage> {
               const VerticalDivider(
                 width: 0,
                 color: Colors.grey,
+                endIndent: 6,
               ),
               const SizedBox(width: 12),
               Flexible(
@@ -1024,6 +1051,7 @@ class _BooksPageState extends State<BooksPage> {
               const SizedBox(width: 12),
             ],
           ),
+          bottomNavigationBar: buildStatusBar(),
           floatingActionButton: FloatingActionButton(
             backgroundColor: _addButtonEnabled
                 ? theme.colorScheme.primary
