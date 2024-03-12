@@ -1,10 +1,10 @@
 import 'package:eh_tagger/src/app/app.dart';
 import 'package:eh_tagger/src/app/config.dart';
 import 'package:eh_tagger/src/app/constants.dart';
-import 'package:eh_tagger/src/app/database.dart';
 import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/app/settings.dart';
 import 'package:eh_tagger/src/app/storage.dart';
+import 'package:eh_tagger/src/database/database.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
@@ -46,6 +46,7 @@ Future<void> main() async {
   if (storageInitialized) {
     await AppDatabase.init();
     settings.setDbInitialized(true);
+    logs.info('Database initialized');
   } else {
     logs.error('Database not initialized');
     settings.setDbInitialized(false);

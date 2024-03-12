@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:eh_tagger/src/app/constants.dart';
-import 'package:eh_tagger/src/app/database.dart';
 import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/app/settings.dart';
 import 'package:eh_tagger/src/app/storage.dart';
 import 'package:eh_tagger/src/calibre/metadata.dart';
+import 'package:eh_tagger/src/database/dao/books.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -86,6 +86,7 @@ class BookHandler {
       if (!destDir.existsSync()) {
         destDir.createSync(recursive: true);
       }
+      final booksDao = BooksDaoImpl();
       for (final file in files) {
         final book = await addBook(file);
         final shouldInputUrl = inputEHentaiUrl && context != null;
@@ -93,7 +94,7 @@ class BookHandler {
           final eHentaiUrl = await getEHentaiUrl(context, book.metadata.title);
           if (eHentaiUrl != null) {
             book.metadata.eHentaiUrl = eHentaiUrl;
-            await AppDatabase().updateEHentaiUrl(
+            await booksDao.updateEHentaiUrl(
               id: book.id,
               title: book.metadata.title,
               eHentaiUrl: eHentaiUrl,
@@ -101,7 +102,7 @@ class BookHandler {
           }
         } else if (urls != null && urls.isNotEmpty) {
           book.metadata.eHentaiUrl = urls.removeAt(0);
-          await AppDatabase().updateEHentaiUrl(
+          await booksDao.updateEHentaiUrl(
             id: book.id,
             title: book.metadata.title,
             eHentaiUrl: book.metadata.eHentaiUrl,
@@ -125,10 +126,11 @@ class BookHandler {
   }
 
   static Future<Book> addBook(PlatformFile file) async {
+    final booksDao = BooksDaoImpl();
     final book = Book.newBook(
         title: basenameWithoutExtension(file.name),
         path: file.path!); // no .zip
-    final id = await AppDatabase().insertBook(book);
+    final id = await booksDao.insertBook(book);
     final destDir = Directory(join(AppStorage.booksPath, '$id')); // books/123
     if (!destDir.existsSync()) {
       destDir.createSync(recursive: true);
@@ -136,7 +138,7 @@ class BookHandler {
     final dest = File(join(destDir.path, '$id.cbz')); // books/123/123.zip
     await dest.writeAsBytes(file.bytes!);
     String? coverPath = await exportFirstImage(destDir.path, dest.path);
-    await AppDatabase().updateBookLocation(
+    await booksDao.updateBookLocation(
         id: id,
         title: book.metadata.title,
         dir: destDir.path,
@@ -226,16 +228,18 @@ class BookHandler {
 
   static Future<void> updateMetadata(
       Map<int, CalibreMetadata> metadataMap) async {
+    final booksDao = BooksDaoImpl();
     for (final entry in metadataMap.entries) {
-      await AppDatabase().updateMetadata(entry.key, entry.value);
+      await booksDao.updateMetadata(entry.key, entry.value);
     }
   }
 
   static Future<List<int>> deleteBooks(List<Book> books) async {
+    final booksDao = BooksDaoImpl();
     final ids = <int>[];
     for (final book in books) {
-      ids.add(await AppDatabase()
-          .deleteBook(id: book.id, title: book.metadata.title));
+      ids.add(
+          await booksDao.deleteBook(id: book.id, title: book.metadata.title));
       final dir = Directory(book.dir);
       if (dir.existsSync()) {
         dir.deleteSync(recursive: true);

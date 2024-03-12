@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
 import 'package:eh_tagger/src/app/constants.dart';
-import 'package:eh_tagger/src/app/database.dart';
 import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/app/settings.dart';
 import 'package:eh_tagger/src/app/storage.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:eh_tagger/src/calibre/handler.dart';
 import 'package:eh_tagger/src/calibre/opf.dart';
+import 'package:eh_tagger/src/database/dao/books.dart';
 import 'package:eh_tagger/src/ehentai/archive.dart';
 import 'package:eh_tagger/src/ehentai/constants.dart';
 import 'package:eh_tagger/src/ehentai/ehentai.dart';
@@ -51,7 +51,8 @@ class _BooksPageState extends State<BooksPage> {
       _saveButtonEnabled = false;
     }
     Future.microtask(() async {
-      final books = await AppDatabase().queryBooks();
+      final booksDao = BooksDaoImpl();
+      final books = await booksDao.queryBooks();
       if (books.isNotEmpty) {
         setState(() {
           _books.addAll(books);

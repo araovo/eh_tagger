@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:eh_tagger/src/app/database.dart';
+import 'package:eh_tagger/src/database/dao/books.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -33,6 +33,7 @@ class _EditDialogState extends State<EditDialog> {
   final _languagesController = TextEditingController();
   final _ratingController = TextEditingController();
   FilePickerResult? _result;
+  final booksDao = BooksDaoImpl();
 
   void _fieldChanged() {
     setState(() {
@@ -83,7 +84,7 @@ class _EditDialogState extends State<EditDialog> {
           _coverPathController.text = _currentBook.coverPath;
         });
       }
-      await AppDatabase().updateBook(_currentBook);
+      await booksDao.updateBook(_currentBook);
       setState(() {
         _isModified = false;
       });

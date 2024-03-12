@@ -33,8 +33,12 @@ const windowOptions = WindowOptions(
   center: true,
 );
 
-const createDatabaseComment = '''
-CREATE TABLE books (
+const databaseVersion = 1;
+
+const booksTable = 'books';
+
+const createBooksTable = '''
+CREATE TABLE $booksTable (
   id INTEGER PRIMARY KEY,
   dir TEXT NOT NULL,
   path TEXT NOT NULL,
