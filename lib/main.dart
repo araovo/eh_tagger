@@ -24,6 +24,7 @@ Future<void> main() async {
     logs.info('Config path: ${AppStorage.configPath}');
     logs.info('Database path: ${AppStorage.dbPath}');
     logs.info('Books path: ${AppStorage.booksPath}');
+    logs.info('Download path: ${AppStorage.downloadPath}');
     logs.info('Temp path: ${AppStorage.tempPath}');
     storageInitialized = true;
   } catch (e, st) {
