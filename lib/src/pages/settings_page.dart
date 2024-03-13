@@ -149,7 +149,14 @@ class SettingsPage extends StatelessWidget {
           widget: Obx(
             () => Switch(
               value: settings.addBooksAfterDownload.value,
-              onChanged: (value) => settings.setAddBooksAfterDownload(value),
+              onChanged: (value) {
+                if (value) {
+                  settings.setAddBooksAfterDownload(true);
+                } else {
+                  settings.setAddBooksAfterDownload(false);
+                  settings.setFetchMetadataAfterDownload(false);
+                }
+              },
             ),
           ),
         ),
@@ -162,9 +169,9 @@ class SettingsPage extends StatelessWidget {
               onChanged: (value) {
                 if (value) {
                   settings.setAddBooksAfterDownload(true);
-                  settings.setFetchMetadataAfterDownload(value);
+                  settings.setFetchMetadataAfterDownload(true);
                 } else {
-                  settings.setFetchMetadataAfterDownload(value);
+                  settings.setFetchMetadataAfterDownload(false);
                 }
               },
             ),
