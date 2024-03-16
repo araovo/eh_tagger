@@ -44,11 +44,13 @@ class BookHandler {
   static Future<List<Book>> addBooks({
     BuildContext? context,
     List<XFile>? xFiles,
-    List<PlatformFile>? platformFiles,
-    List<String>? urls,
+    PlatformFile? platformFile,
+    String? url,
     bool? deleteSourceBooks,
   }) async {
     final settings = Get.find<Settings>();
+    final logs = Get.find<Logs>();
+    // init settings
     final inputEHentaiUrl = settings.inputEHentaiUrl.value;
     late final bool delSourceBooks;
     if (deleteSourceBooks != null) {
@@ -56,7 +58,32 @@ class BookHandler {
     } else {
       delSourceBooks = settings.delSourceBooks.value;
     }
+    final destDir = Directory(AppStorage.booksPath);
+    if (!destDir.existsSync()) {
+      destDir.createSync(recursive: true);
+    }
+
     try {
+      if (platformFile != null) {
+        // after download from e-hentai
+        final booksDao = BooksDaoImpl();
+        final book = await addBook(platformFile);
+        book.metadata.eHentaiUrl =
+            url ?? ''; // it should be non-null, but just in case
+        await booksDao.updateEHentaiUrl(
+          id: book.id,
+          title: book.metadata.title,
+          eHentaiUrl: book.metadata.eHentaiUrl,
+        );
+        if (delSourceBooks) {
+          final sourceFile = File(platformFile.path!);
+          if (await sourceFile.exists()) {
+            logs.info('Delete source file: ${sourceFile.path}');
+            await sourceFile.delete();
+          }
+        }
+        return [book];
+      }
       FilePickerResult? result;
       late final List<PlatformFile> files;
       if (xFiles != null) {
@@ -72,8 +99,6 @@ class BookHandler {
           );
         }).toList();
         files = await Future.wait(platformFiles);
-      } else if (platformFiles != null) {
-        files = platformFiles;
       } else {
         result = await FilePicker.platform
             .pickFiles(allowMultiple: true, withData: true);
@@ -82,10 +107,6 @@ class BookHandler {
       }
 
       final books = <Book>[];
-      final destDir = Directory(AppStorage.booksPath);
-      if (!destDir.existsSync()) {
-        destDir.createSync(recursive: true);
-      }
       final booksDao = BooksDaoImpl();
       for (final file in files) {
         final book = await addBook(file);
@@ -100,18 +121,10 @@ class BookHandler {
               eHentaiUrl: eHentaiUrl,
             );
           }
-        } else if (urls != null && urls.isNotEmpty) {
-          book.metadata.eHentaiUrl = urls.removeAt(0);
-          await booksDao.updateEHentaiUrl(
-            id: book.id,
-            title: book.metadata.title,
-            eHentaiUrl: book.metadata.eHentaiUrl,
-          );
         }
         if (delSourceBooks) {
           final sourceFile = File(file.path!);
           if (await sourceFile.exists()) {
-            final logs = Get.find<Logs>();
             logs.info('Delete source file: ${sourceFile.path}');
             await sourceFile.delete();
           }

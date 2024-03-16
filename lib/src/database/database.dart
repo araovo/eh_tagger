@@ -22,11 +22,27 @@ class AppDatabase {
         onCreate: (db, version) async {
           await AppDatabase.create(db, version);
         },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          await AppDatabase.upgrade(db, oldVersion, newVersion);
+        },
       ),
     );
   }
 
   static Future<void> create(Database db, int version) async {
     await db.execute(createBooksTable);
+    await db.execute(createDownloadTasksTable);
+  }
+
+  static Future<void> upgrade(
+      Database db, int oldVersion, int newVersion) async {
+    if (oldVersion == newVersion) return;
+    switch (oldVersion) {
+      case 1:
+        await db.execute(createDownloadTasksTable);
+        break;
+      default:
+        break;
+    }
   }
 }

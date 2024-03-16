@@ -1,6 +1,7 @@
 import 'package:eh_tagger/src/app/settings.dart';
 import 'package:eh_tagger/src/ehentai/translation_database.dart';
 import 'package:eh_tagger/src/pages/books_page.dart';
+import 'package:eh_tagger/src/pages/download_page.dart';
 import 'package:eh_tagger/src/pages/logs_page.dart';
 import 'package:eh_tagger/src/pages/settings_page.dart';
 import 'package:flutter/material.dart';
@@ -125,6 +126,13 @@ class _AppWindowState extends State<AppWindow> {
                   ),
                 ),
                 NavigationRailDestination(
+                  icon: const Icon(Icons.download, size: 28),
+                  label: Text(
+                    AppLocalizations.of(context)!.download,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                NavigationRailDestination(
                   icon: const Icon(Icons.list, size: 28),
                   label: Text(
                     AppLocalizations.of(context)!.logs,
@@ -149,6 +157,7 @@ class _AppWindowState extends State<AppWindow> {
                     index: _index,
                     children: const [
                       BooksPage(),
+                      DownloadPage(),
                       LogsPage(),
                       SettingsPage(),
                     ],

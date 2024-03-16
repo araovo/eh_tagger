@@ -33,9 +33,10 @@ const windowOptions = WindowOptions(
   center: true,
 );
 
-const databaseVersion = 1;
+const databaseVersion = 2;
 
 const booksTable = 'books';
+const downloadTasksTable = 'downloadTasks';
 
 const createBooksTable = '''
 CREATE TABLE $booksTable (
@@ -53,3 +54,23 @@ CREATE TABLE $booksTable (
   eHentaiUrl TEXT NOT NULL
 );
 ''';
+const createDownloadTasksTable = '''
+CREATE TABLE $downloadTasksTable (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  path TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  eHentaiUrl TEXT NOT NULL,
+  downloadUrl TEXT NOT NULL,
+  status INTEGER NOT NULL,
+  progress REAL NOT NULL
+);
+''';
+
+const taskRunningColor = Colors.green;
+const taskPausedColor = Colors.orange;
+const taskFailedColor = Colors.red;
+const taskCompletedColor = Colors.blue;
+
+const sizeUnits = ['B', 'KB', 'MB', 'GB', 'TB'];
+const speedUnits = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];

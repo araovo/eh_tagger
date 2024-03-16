@@ -1,5 +1,6 @@
 import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:eh_tagger/src/app/books.dart';
 import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:flutter/material.dart';
@@ -7,14 +8,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 
 class DragTargetWidget extends StatefulWidget {
-  final List<Book> books;
-  final VoidCallback onBooksChanged;
-
-  const DragTargetWidget({
-    super.key,
-    required this.books,
-    required this.onBooksChanged,
-  });
+  const DragTargetWidget({super.key});
 
   @override
   State<DragTargetWidget> createState() => _DragTargetWidgetState();
@@ -25,16 +19,14 @@ class _DragTargetWidgetState extends State<DragTargetWidget> {
   bool _dragging = false;
 
   Future<void> addBooks() async {
+    final booksController = Get.find<BooksController>();
     try {
       final addedBooks =
           await BookHandler.addBooks(context: context, xFiles: _xFiles);
       if (addedBooks.isEmpty) {
         return;
       }
-      setState(() {
-        widget.books.insertAll(0, addedBooks.reversed);
-        widget.onBooksChanged();
-      });
+      booksController.addBooks(addedBooks.reversed);
       if (!mounted) return;
       await showDialog(
         context: context,

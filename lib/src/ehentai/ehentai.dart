@@ -1,8 +1,8 @@
 import 'package:eh_tagger/src/app/settings.dart';
 import 'package:eh_tagger/src/app/storage.dart';
-import 'package:eh_tagger/src/ehentai/network.dart';
 import 'package:eh_tagger/src/calibre/metadata.dart';
 import 'package:eh_tagger/src/ehentai/extensions/query.dart';
+import 'package:eh_tagger/src/ehentai/network.dart';
 
 class EHentai with EHentaiNetworkHandler {
   final metadataMap = <int, CalibreMetadata>{};

@@ -149,10 +149,10 @@ mixin EHentaiNetworkHandler {
     if (urlMatch == null) {
       throw Exception('Failed to get archive link');
     }
-    final archiveUrl = urlMatch.group(1)!;
+    final archiveDownloadPageUrl = urlMatch.group(1)!;
 
     // get archive raw
-    final pageRaw = await getHtmlContent(archiveUrl);
+    final pageRaw = await getHtmlContent(archiveDownloadPageUrl);
     // parse <strong>name</strong>
     final namePatten = RegExp(r'<strong>(.+)</strong>');
     final nameMatch = namePatten.firstMatch(pageRaw);
@@ -161,8 +161,17 @@ mixin EHentaiNetworkHandler {
     }
     final name = nameMatch.group(1)!;
 
+    // get size
+    final archiveUrl = '$archiveDownloadPageUrl$downloadStartSuffix';
+    final responseHead = await dio.head(archiveUrl);
+    final size = responseHead.headers.value('content-length');
+    if (size == null) {
+      throw Exception('Failed to get archive size');
+    }
+
     return EHArchive(
       name: name,
+      size: int.parse(size),
       galleryUrl: eHentaiUrl,
       archiveUrl: archiveUrl,
     );

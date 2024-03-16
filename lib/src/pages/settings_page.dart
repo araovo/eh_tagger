@@ -1,5 +1,6 @@
 import 'package:eh_tagger/src/app/constants.dart';
 import 'package:eh_tagger/src/app/settings.dart';
+import 'package:eh_tagger/src/downloader/downloader.dart';
 import 'package:eh_tagger/src/pages/widgets/page.dart';
 import 'package:eh_tagger/src/pages/widgets/setting_item.dart';
 import 'package:eh_tagger/src/pages/widgets/setting_item/db_item.dart';
@@ -108,7 +109,15 @@ class SettingsPage extends StatelessWidget {
           widget: Obx(
             () => Switch(
               value: settings.useProxy.value,
-              onChanged: (value) => settings.setUseProxy(value),
+              onChanged: (value) {
+                settings.setUseProxy(value);
+                final downloader = Get.find<Downloader>();
+                if (value) {
+                  downloader.setProxy(settings.proxyLink.value);
+                } else {
+                  downloader.setProxy('');
+                }
+              },
             ),
           ),
         ),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:eh_tagger/src/app/constants.dart';
 import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:eh_tagger/src/calibre/metadata.dart';
@@ -50,7 +51,7 @@ class BooksDaoImpl implements BooksDao {
   Future<List<Book>> queryBooks() async {
     var maps = <Map<String, dynamic>>[];
     try {
-      maps = await _db.query('books');
+      maps = await _db.query(booksTable);
     } catch (e) {
       _logs.error('Query books: $e');
       return [];
@@ -70,7 +71,7 @@ class BooksDaoImpl implements BooksDao {
   @override
   Future<int> insertBook(Book book) async {
     final result = await _db.insert(
-      'books',
+      booksTable,
       {
         'dir': book.dir,
         'path': book.path,
@@ -99,7 +100,7 @@ class BooksDaoImpl implements BooksDao {
     required coverPath,
   }) async {
     await _db.update(
-      'books',
+      booksTable,
       {
         'dir': dir,
         'path': path,
@@ -118,7 +119,7 @@ class BooksDaoImpl implements BooksDao {
     required String eHentaiUrl,
   }) async {
     await _db.update(
-      'books',
+      booksTable,
       {
         'eHentaiUrl': eHentaiUrl,
       },
@@ -131,7 +132,7 @@ class BooksDaoImpl implements BooksDao {
   @override
   Future<void> updateBook(Book book) async {
     await _db.update(
-      'books',
+      booksTable,
       {
         'dir': book.dir,
         'path': book.path,
@@ -154,7 +155,7 @@ class BooksDaoImpl implements BooksDao {
   @override
   Future<void> updateMetadata(int id, CalibreMetadata metadata) async {
     await _db.update(
-      'books',
+      booksTable,
       {
         'title': metadata.title,
         'authors': metadata.authors?.join(','),
@@ -173,7 +174,7 @@ class BooksDaoImpl implements BooksDao {
   @override
   Future<int> deleteBook({required int id, required String title}) async {
     await _db.delete(
-      'books',
+      booksTable,
       where: 'id = ?',
       whereArgs: [id],
     );

@@ -122,29 +122,48 @@ class Settings extends GetxController {
 
 extension SettingsExtension on Settings {
   ThemeMode get mode => _mode.value;
+
   RxBool get inputEHentaiUrl => _inputEHentaiUrl;
+
   RxBool get useExHentai => _useExHentai;
+
   RxBool get chineseEHentai => _chineseEHentai;
+
   RxBool get useProxy => _useProxy;
+
   RxString get proxyLink => _proxyLink;
+
   RxString get ipbMemberId => _ipbMemberId;
+
   RxString get ipbPassHash => _ipbPassHash;
+
   RxString get igneous => _igneous;
+
   RxBool get addBooksAfterDownload => _addBooksAfterDownload;
+
   RxBool get fetchMetadataAfterDownload => _fetchMetadataAfterDownload;
+
   RxBool get delSourceBooks => _delSourceBooks;
+
   RxBool get saveOpf => _saveOpf;
+
   RxString get calibredbPath => _calibredbPath;
+
   RxString get metadataDbPath => _metadataDbPath;
+
   RxBool get netDriveOptimization => _netDriveOptimization;
+
   RxString get transDbVersion => _transDbVersion;
+
   bool get dbInitialized => _dbInitialized;
 
   void _saveConfig() {
     final file = File(AppStorage.configPath);
     file.writeAsStringSync(jsonEncode(_config.toJson()));
+    /*
     final logs = Get.find<Logs>();
     logs.info('Config saved');
+     */
   }
 
   void setTheme(int index) {

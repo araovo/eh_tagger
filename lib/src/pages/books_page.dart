@@ -1,29 +1,19 @@
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
-import 'package:eh_tagger/src/app/constants.dart';
+import 'package:eh_tagger/src/app/books.dart';
 import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/app/settings.dart';
-import 'package:eh_tagger/src/app/storage.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:eh_tagger/src/calibre/handler.dart';
 import 'package:eh_tagger/src/calibre/opf.dart';
-import 'package:eh_tagger/src/database/dao/books.dart';
-import 'package:eh_tagger/src/ehentai/archive.dart';
-import 'package:eh_tagger/src/ehentai/constants.dart';
 import 'package:eh_tagger/src/ehentai/ehentai.dart';
 import 'package:eh_tagger/src/pages/widgets/drag_target.dart';
 import 'package:eh_tagger/src/pages/widgets/edit_dialog.dart';
 import 'package:eh_tagger/src/pages/widgets/page.dart';
-import 'package:eh_tagger/src/pages/widgets/setting_item/dialog_input_urls.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart' hide context;
-import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class BooksPage extends StatefulWidget {
   const BooksPage({super.key});
@@ -36,52 +26,24 @@ class _BooksPageState extends State<BooksPage> {
   bool _addButtonEnabled = true;
   bool _updateButtonEnabled = true;
   bool _saveButtonEnabled = true;
-  final _books = <Book>[];
   int? _selectedBookId;
   final _multiSelectedBookId = <int>{};
   final _coverBytes = Uint8List(0).obs;
 
-  @override
-  void initState() {
-    super.initState();
-    final settings = Get.find<Settings>();
-    if (!settings.dbInitialized) {
-      _addButtonEnabled = false;
-      _updateButtonEnabled = false;
-      _saveButtonEnabled = false;
-    }
-    Future.microtask(() async {
-      final booksDao = BooksDaoImpl();
-      final books = await booksDao.queryBooks();
-      if (books.isNotEmpty) {
-        setState(() {
-          _books.addAll(books);
-        });
-      }
-    });
-  }
-
-  int _getIndex(int bookId) {
-    return _books.indexWhere((book) => book.id == bookId);
-  }
-
-  void updateBooks() {
-    setState(() {});
-  }
-
   Widget buildBookList(bool isDarkMode) {
+    final books = Get.find<BooksController>().books;
     return Stack(
       children: [
         Padding(
           padding: const EdgeInsets.all(12.0),
           child: ListView.separated(
-            itemCount: _books.length,
+            itemCount: books.length,
             itemBuilder: (context, index) {
-              final bookId = _books[index].id;
-              final title = _books[index].metadata.title;
-              final authors = _books[index].metadata.authors?.join(',');
-              final publisher = _books[index].metadata.publisher;
-              final tags = _books[index].metadata.tags?.join(', ');
+              final bookId = books[index].id;
+              final title = books[index].metadata.title;
+              final authors = books[index].metadata.authors?.join(', ');
+              final publisher = books[index].metadata.publisher;
+              final tags = books[index].metadata.tags?.join(', ');
               final authorsContent = authors != null && authors.isNotEmpty
                   ? '${AppLocalizations.of(context)!.authors}: $authors'
                   : '';
@@ -134,7 +96,7 @@ class _BooksPageState extends State<BooksPage> {
                             _coverBytes.value = Uint8List(0);
                           } else {
                             _selectedBookId = bookId;
-                            final cover = File(_books[index].coverPath);
+                            final cover = File(books[index].coverPath);
                             if (await cover.exists()) {
                               _coverBytes.value = await cover.readAsBytes();
                             } else {
@@ -191,9 +153,9 @@ class _BooksPageState extends State<BooksPage> {
             },
           ),
         ),
-        IgnorePointer(
+        const IgnorePointer(
           child: Center(
-            child: DragTargetWidget(books: _books, onBooksChanged: updateBooks),
+            child: DragTargetWidget(),
           ),
         ),
       ],
@@ -209,15 +171,17 @@ class _BooksPageState extends State<BooksPage> {
     String? languages;
     double? rating;
 
+    final booksController = Get.find<BooksController>();
     if (_selectedBookId != null) {
-      final index = _getIndex(_selectedBookId!);
-      title = _books[index].metadata.title;
-      eHentaiUrl = _books[index].metadata.eHentaiUrl;
-      authors = _books[index].metadata.authors?.join(',');
-      publisher = _books[index].metadata.publisher;
-      tags = _books[index].metadata.tags?.join(', ');
-      languages = _books[index].metadata.languages?.join(', ');
-      rating = _books[index].metadata.rating;
+      final index = booksController.getIndex(_selectedBookId!);
+      final book = booksController.getBook(index);
+      title = book.metadata.title;
+      eHentaiUrl = book.metadata.eHentaiUrl;
+      authors = book.metadata.authors?.join(',');
+      publisher = book.metadata.publisher;
+      tags = book.metadata.tags?.join(', ');
+      languages = book.metadata.languages?.join(', ');
+      rating = book.metadata.rating;
     }
     return Align(
       alignment: Alignment.topCenter,
@@ -287,159 +251,11 @@ class _BooksPageState extends State<BooksPage> {
       return [];
     }
     final ids = _multiSelectedBookId.toList()..sort();
-    return _books.where((book) => ids.contains(book.id)).toList();
-  }
-
-  Future<void> downloadBooks() async {
-    final urls = await showDialog<List<String>>(
-      context: context,
-      builder: (context) => const DialogInputUrls(),
-    );
-    if (urls == null || urls.isEmpty) {
-      return;
-    }
-
-    final settings = Get.find<Settings>();
-    final logs = Get.find<Logs>();
-    final archiveDownloadHandler = ArchiveDownloadHandler(
-      urls: urls,
-      settings: settings,
-      logs: logs,
-    );
-    final archives = await archiveDownloadHandler.getArchives();
-    if (archives.isEmpty) return;
-
-    final downloader = FileDownloader();
-    final tasks = <DownloadTask>[];
-
-    for (final archive in archives) {
-      if (archive.archiveUrl.isEmpty) {
-        logs.error('Archive url is empty: ${archive.name}');
-        continue;
-      }
-      tasks.add(DownloadTask(
-        displayName: archive.name,
-        url: '${archive.archiveUrl}$downloadStartSuffix',
-        metaData: archive.galleryUrl,
-        directory: downloadTemporaryDirName,
-        baseDirectory: BaseDirectory.temporary,
-        updates: Updates.statusAndProgress,
-        allowPause: false,
-      ));
-    }
-    if (settings.useProxy.value && settings.proxyLink.value.isNotEmpty) {
-      try {
-        final host = settings.proxyLink.value.split(':')[0];
-        final port = int.parse(settings.proxyLink.value.split(':')[1]);
-        await downloader.configure(globalConfig: [('proxy', (host, port))]);
-      } catch (e) {
-        logs.error('Failed to configure proxy: $e');
-        return;
-      }
-    } else {
-      await downloader.configure(globalConfig: []);
-    }
-    final progress = <String, int>{};
-    final results = await downloader.downloadBatch(
-      tasks,
-      taskProgressCallback: (update) {
-        final progressPercentage = (update.progress * 100).toInt();
-        if (!progress.containsKey(update.task.taskId)) {
-          progress[update.task.taskId] = 0;
-        }
-        if (progressPercentage - progress[update.task.taskId]! >
-            downloadThreshold) {
-          progress[update.task.taskId] = progressPercentage;
-          logs.info(
-            'Downloading ${update.task.displayName}: $progressPercentage%, speed: ${update.networkSpeedAsString}',
-          );
-        }
-      },
-      batchProgressCallback: (succeeded, failed) {
-        if (succeeded == 0 && failed == 0) {
-          logs.info('Start to download ${tasks.length} archives');
-        }
-      },
-    );
-    logs.info(
-        'Downloaded ${results.succeeded.length}/${tasks.length} archives');
-
-    final downloadDir = Directory(join(
-      AppStorage.libraryPath,
-      downloadDirName,
-    ));
-    if (!await downloadDir.exists()) {
-      await downloadDir.create(recursive: true);
-    }
-    final tempDir = await getTemporaryDirectory();
-    final platformFiles = <PlatformFile>[];
-    final succeedUrls = <String>[];
-    for (final task in results.succeeded) {
-      final file = File(join(
-        tempDir.path,
-        downloadTemporaryDirName,
-        task.filename,
-      ));
-      if (!await file.exists()) {
-        logs.error('File not found: ${file.path}');
-        continue;
-      }
-      // move to downloadDir
-      final newFile = File(join(
-        downloadDir.path,
-        task.displayName,
-      ));
-      await file.copy(newFile.path);
-      await file.delete();
-      if (settings.addBooksAfterDownload.value) {
-        platformFiles.add(PlatformFile(
-          name: task.displayName,
-          path: newFile.path,
-          size: await newFile.length(),
-          bytes: await newFile.readAsBytes(),
-        ));
-        succeedUrls.add(task.metaData);
-      }
-    }
-
-    if (settings.addBooksAfterDownload.value) {
-      final books = await BookHandler.addBooks(
-        platformFiles: platformFiles,
-        urls: succeedUrls,
-      );
-      if (books.isNotEmpty) {
-        final reversedBooks = books.reversed.toList();
-        _books.insertAll(0, reversedBooks);
-        if (settings.fetchMetadataAfterDownload.value) {
-          final ids = reversedBooks.map((book) => book.id);
-          await updateSelectedBooks(ids, false);
-        }
-      }
-      setState(() {});
-    }
+    final books = Get.find<BooksController>().books;
+    return books.where((book) => ids.contains(book.id)).toList();
   }
 
   Future<void> editSelectedBooks() async {
-    if (_multiSelectedBookId.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context)!.editBooks),
-            content: Text(AppLocalizations.of(context)!.selectedBooksEmpty),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
-                child: Text(AppLocalizations.of(context)!.ok),
-              ),
-            ],
-          );
-        },
-      );
-      return;
-    }
     await showDialog(
       context: context,
       builder: (context) {
@@ -449,8 +265,10 @@ class _BooksPageState extends State<BooksPage> {
       },
     );
     if (_selectedBookId != null) {
-      final index = _getIndex(_selectedBookId!);
-      final cover = File(_books[index].coverPath);
+      final booksController = Get.find<BooksController>();
+      final index = booksController.getIndex(_selectedBookId!);
+      final book = Get.find<BooksController>().getBook(index);
+      final cover = File(book.coverPath);
       if (await cover.exists()) {
         _coverBytes.value = await cover.readAsBytes();
       } else {
@@ -464,29 +282,6 @@ class _BooksPageState extends State<BooksPage> {
     setState(() {
       _saveButtonEnabled = false;
     });
-    if (_multiSelectedBookId.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context)!.saveToCalibre),
-            content: Text(AppLocalizations.of(context)!.selectedBooksEmpty),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
-                child: Text(AppLocalizations.of(context)!.ok),
-              ),
-            ],
-          );
-        },
-      );
-      setState(() {
-        _saveButtonEnabled = true;
-      });
-      return;
-    }
     final saveConfirm = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -576,42 +371,18 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
-  Future<void> updateSelectedBooks(Iterable<int> ids,
-      [bool notify = true]) async {
+  Future<void> updateSelectedBooks() async {
+    final logs = Get.find<Logs>();
     setState(() {
       _updateButtonEnabled = false;
     });
-    if (ids.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context)!.updateMetadata),
-            content: Text(AppLocalizations.of(context)!.selectedBooksEmpty),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
-                child: Text(AppLocalizations.of(context)!.ok),
-              ),
-            ],
-          );
-        },
-      );
-      setState(() {
-        _updateButtonEnabled = true;
-      });
-      return;
-    }
-    final books = _books.where((book) => ids.contains(book.id)).toList();
-    final total = books.length;
+    final selectedBooks = getSelectedBooks();
+    final total = selectedBooks.length;
     final settings = Get.find<Settings>();
     late final EHentai eHentai;
     try {
       eHentai = EHentai(settings: settings);
     } catch (e) {
-      final logs = Get.find<Logs>();
       logs.error('Failed to create EHentai: $e');
       if (!mounted) return;
       await showDialog(
@@ -639,10 +410,9 @@ class _BooksPageState extends State<BooksPage> {
 
     bool error = false;
 
-    final logs = Get.find<Logs>();
-    logs.info('Start to get metadata for ${books.length} books');
+    logs.info('Start to get metadata for ${selectedBooks.length} books');
     final futures = <Future>[];
-    for (final book in books) {
+    for (final book in selectedBooks) {
       futures.add(() async {
         try {
           if (book.metadata.eHentaiUrl.isNotEmpty) {
@@ -682,7 +452,7 @@ class _BooksPageState extends State<BooksPage> {
     await BookHandler.updateMetadata(eHentai.metadataMap);
 
     setState(() {
-      for (final book in _books) {
+      for (final book in selectedBooks) {
         if (eHentai.metadataMap.containsKey(book.id)) {
           book.metadata = eHentai.metadataMap[book.id]!;
           if (settings.saveOpf.value) {
@@ -693,7 +463,7 @@ class _BooksPageState extends State<BooksPage> {
       }
       _updateButtonEnabled = true;
     });
-    if (mounted && notify) {
+    if (mounted) {
       String title = AppLocalizations.of(context)!.updateMetadata;
       String content = AppLocalizations.of(context)!.updateMetadataSuccess(
         eHentai.metadataMap.length,
@@ -726,26 +496,6 @@ class _BooksPageState extends State<BooksPage> {
   }
 
   Future<void> deleteSelectedBooks() async {
-    if (_multiSelectedBookId.isEmpty) {
-      await showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(AppLocalizations.of(context)!.deleteBooks),
-            content: Text(AppLocalizations.of(context)!.selectedBooksEmpty),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(true);
-                },
-                child: Text(AppLocalizations.of(context)!.ok),
-              ),
-            ],
-          );
-        },
-      );
-      return;
-    }
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -757,13 +507,13 @@ class _BooksPageState extends State<BooksPage> {
               onPressed: () {
                 Navigator.of(context).pop(false);
               },
-              child: Text(AppLocalizations.of(context)!.cancel),
+              child: Text(AppLocalizations.of(context)!.no),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(true);
               },
-              child: Text(AppLocalizations.of(context)!.ok),
+              child: Text(AppLocalizations.of(context)!.yes),
             ),
           ],
         );
@@ -771,8 +521,8 @@ class _BooksPageState extends State<BooksPage> {
     );
     if (shouldDelete != null && shouldDelete) {
       try {
-        final books = getSelectedBooks();
-        final ids = await BookHandler.deleteBooks(books);
+        final selectedBooks = getSelectedBooks();
+        final ids = await BookHandler.deleteBooks(selectedBooks);
         if (ids.isEmpty) {
           return;
         }
@@ -782,7 +532,8 @@ class _BooksPageState extends State<BooksPage> {
           });
         }
         setState(() {
-          _books.removeWhere((book) => ids.contains(book.id));
+          final booksController = Get.find<BooksController>();
+          booksController.removeBooks(ids);
           _multiSelectedBookId.clear();
         });
       } catch (e) {
@@ -824,7 +575,8 @@ class _BooksPageState extends State<BooksPage> {
         return;
       }
       setState(() {
-        _books.insertAll(0, addedBooks.reversed);
+        final booksController = Get.find<BooksController>();
+        booksController.addBooks(addedBooks.reversed);
       });
       if (!mounted) return;
       await showDialog(
@@ -878,7 +630,8 @@ class _BooksPageState extends State<BooksPage> {
 
   PreferredSizeWidget buildAppBar() {
     final theme = Theme.of(context);
-    final settings = Get.find<Settings>();
+    final booksController = Get.find<BooksController>();
+    final books = booksController.books;
     return AppBar(
       title: Text(AppLocalizations.of(context)!.books),
       actions: [
@@ -888,12 +641,12 @@ class _BooksPageState extends State<BooksPage> {
           tooltip: AppLocalizations.of(context)!.selectAll,
           onPressed: () {
             setState(() {
-              if (_multiSelectedBookId.length == _books.length) {
+              if (_multiSelectedBookId.length == booksController.length) {
                 _multiSelectedBookId.clear();
               } else {
                 _multiSelectedBookId.clear();
                 // add all book id to _multiSelectedBookId
-                for (final book in _books) {
+                for (final book in books) {
                   _multiSelectedBookId.add(book.id);
                 }
               }
@@ -908,8 +661,8 @@ class _BooksPageState extends State<BooksPage> {
             if (_multiSelectedBookId.isEmpty) return;
             if (_multiSelectedBookId.length == 2) {
               // start and end
-              int start = _getIndex(_multiSelectedBookId.first);
-              int end = _getIndex(_multiSelectedBookId.last);
+              int start = booksController.getIndex(_multiSelectedBookId.first);
+              int end = booksController.getIndex(_multiSelectedBookId.last);
               if (start > end) {
                 // swap
                 final temp = start;
@@ -925,7 +678,7 @@ class _BooksPageState extends State<BooksPage> {
                   _multiSelectedBookId.clear();
                   // set range
                   for (var i = start; i <= end; i++) {
-                    _multiSelectedBookId.add(_books[i].id);
+                    _multiSelectedBookId.add(books[i].id);
                   }
                 });
               }
@@ -938,37 +691,9 @@ class _BooksPageState extends State<BooksPage> {
         ),
         IconButton(
           color: theme.colorScheme.primary,
-          icon: const Icon(Icons.download),
-          tooltip: AppLocalizations.of(context)!.downloadBooks,
-          onPressed:
-              settings.dbInitialized ? () async => await downloadBooks() : null,
-        ),
-        // openDownloadDir
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.folder_open),
-          tooltip: AppLocalizations.of(context)!.openDownloadDir,
-          onPressed: () async {
-            final downloadDir = Directory(AppStorage.downloadPath);
-            if (!await downloadDir.exists()) {
-              await downloadDir.create(recursive: true);
-            }
-            final uri = Uri.file(downloadDir.path);
-            final logs = Get.find<Logs>();
-            try {
-              if (!await launchUrl(uri)) {
-                logs.error('Failed to open download dir: ${uri.path}');
-              }
-            } catch (e) {
-              logs.error('Failed to open download dir: $e');
-            }
-          },
-        ),
-        IconButton(
-          color: theme.colorScheme.primary,
           icon: const Icon(Icons.edit),
           tooltip: AppLocalizations.of(context)!.editBooks,
-          onPressed: settings.dbInitialized
+          onPressed: _multiSelectedBookId.isNotEmpty
               ? () async => await editSelectedBooks()
               : null,
         ),
@@ -976,22 +701,23 @@ class _BooksPageState extends State<BooksPage> {
           color: theme.colorScheme.primary,
           icon: const Icon(Icons.find_in_page),
           tooltip: AppLocalizations.of(context)!.updateMetadata,
-          onPressed: _updateButtonEnabled
-              ? () async => await updateSelectedBooks(_multiSelectedBookId)
+          onPressed: _updateButtonEnabled && _multiSelectedBookId.isNotEmpty
+              ? () async => await updateSelectedBooks()
               : null,
         ),
         IconButton(
           color: theme.colorScheme.primary,
           icon: const Icon(Icons.save_as),
           tooltip: AppLocalizations.of(context)!.saveToCalibre,
-          onPressed:
-              _saveButtonEnabled ? () async => await saveSelectedBooks() : null,
+          onPressed: _saveButtonEnabled && _multiSelectedBookId.isNotEmpty
+              ? () async => await saveSelectedBooks()
+              : null,
         ),
         IconButton(
           color: theme.colorScheme.primary,
           icon: const Icon(Icons.delete),
           tooltip: AppLocalizations.of(context)!.deleteBooks,
-          onPressed: settings.dbInitialized
+          onPressed: _multiSelectedBookId.isNotEmpty
               ? () async => await deleteSelectedBooks()
               : null,
         ),
@@ -1001,6 +727,8 @@ class _BooksPageState extends State<BooksPage> {
   }
 
   Widget buildStatusBar() {
+    final booksController = Get.find<BooksController>();
+    final length = booksController.length;
     return Padding(
       padding: const EdgeInsets.only(left: 12, right: 12),
       child: Column(
@@ -1014,11 +742,11 @@ class _BooksPageState extends State<BooksPage> {
             if (_multiSelectedBookId.isNotEmpty) ...[
               Text(
                 AppLocalizations.of(context)!
-                    .booksSelected(_multiSelectedBookId.length, _books.length),
+                    .booksSelected(_multiSelectedBookId.length, length),
                 style: Theme.of(context).textTheme.labelSmall,
               ),
             ] else ...[
-              Text(AppLocalizations.of(context)!.totalBooks(_books.length),
+              Text(AppLocalizations.of(context)!.totalBooks(length),
                   style: Theme.of(context).textTheme.labelSmall),
             ]
           ])
@@ -1037,7 +765,9 @@ class _BooksPageState extends State<BooksPage> {
             children: [
               Flexible(
                 flex: 12,
-                child: buildBookList(theme.brightness == Brightness.dark),
+                child: Obx(
+                  () => buildBookList(theme.brightness == Brightness.dark),
+                ),
               ),
               const VerticalDivider(
                 width: 0,

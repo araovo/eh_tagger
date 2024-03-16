@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:eh_tagger/src/database/dao/books.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:path/path.dart';
 
 class EditDialog extends StatefulWidget {
