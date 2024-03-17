@@ -1,14 +1,18 @@
+import 'package:eh_tagger/src/app/logs.dart';
 import 'package:eh_tagger/src/app/settings.dart';
 import 'package:eh_tagger/src/app/storage.dart';
+import 'package:eh_tagger/src/calibre/extensions/translate.dart';
 import 'package:eh_tagger/src/calibre/metadata.dart';
 import 'package:eh_tagger/src/ehentai/extensions/query.dart';
 import 'package:eh_tagger/src/ehentai/network.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class EHentai with EHentaiNetworkHandler {
   final metadataMap = <int, CalibreMetadata>{};
   late final bool useExHentai;
   late final bool chineseEHentai;
   late final String transDbPath;
+  Database? transDb;
 
   EHentai({required Settings settings}) {
     useExHentai = settings.useExHentai.value;
@@ -27,6 +31,16 @@ class EHentai with EHentaiNetworkHandler {
       ipbPassHash: settings.ipbPassHash.value,
       igneous: settings.igneous.value,
     );
+  }
+
+  Future<void> initTransDb(Logs logs) async {
+    logs.info('Initializing translation database');
+    transDb = await databaseFactoryFfi.openDatabase(transDbPath);
+  }
+
+  Future<void> closeTransDb(Logs logs) async {
+    logs.info('Closing translation database');
+    await transDb?.close();
   }
 
   Future<void> identify({
@@ -77,6 +91,15 @@ class EHentai with EHentaiNetworkHandler {
       return;
     } catch (_) {
       rethrow;
+    }
+  }
+
+  Future<void> translateMetadata() async {
+    if (transDb == null) return;
+    if (metadataMap.isEmpty) return;
+    for (final id in metadataMap.keys) {
+      if (metadataMap[id] == null) continue;
+      await TranslateExtension.translate(transDb, metadataMap[id]!);
     }
   }
 }

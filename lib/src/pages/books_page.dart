@@ -410,6 +410,16 @@ class _BooksPageState extends State<BooksPage> {
 
     bool error = false;
 
+    if (eHentai.chineseEHentai && eHentai.transDbPath.isNotEmpty) {
+      try {
+        await eHentai.initTransDb(logs);
+      } catch (e) {
+        logs.error('Failed to init translation database: $e');
+        eHentai.transDb = null;
+        error = true;
+      }
+    }
+
     logs.info('Start to get metadata for ${selectedBooks.length} books');
     final futures = <Future>[];
     for (final book in selectedBooks) {
@@ -443,6 +453,8 @@ class _BooksPageState extends State<BooksPage> {
       }());
     }
     await Future.wait(futures);
+    await eHentai.translateMetadata();
+    await eHentai.closeTransDb(logs);
     if (eHentai.metadataMap.isEmpty) {
       setState(() {
         _updateButtonEnabled = true;

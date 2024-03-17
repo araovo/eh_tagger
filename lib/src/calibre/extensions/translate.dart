@@ -54,9 +54,9 @@ extension TranslateExtension on CalibreMetadata {
     }
   }
 
-  static Future<void> translate(
-      String transDbPath, CalibreMetadata metadata) async {
-    final db = await databaseFactoryFfi.openDatabase(transDbPath);
+  static Future<void> translate(Database? db, CalibreMetadata metadata) async {
+    if (db == null) return;
+
     final tranTag = <String>[];
     final languages = <String>[];
     final groups = <String>[];
@@ -111,7 +111,6 @@ extension TranslateExtension on CalibreMetadata {
     }
     metadata.authors = authors;
     metadata.tags = tranTag;
-    await db.close();
     final logs = Get.find<Logs>();
     logs.info('Translate metadata: ${metadata.toString()}');
   }

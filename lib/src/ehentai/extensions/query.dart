@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:eh_tagger/src/calibre/extensions/translate.dart';
 import 'package:eh_tagger/src/calibre/metadata.dart';
 import 'package:eh_tagger/src/ehentai/constants.dart';
 import 'package:eh_tagger/src/ehentai/ehentai.dart';
@@ -146,9 +145,6 @@ extension QueryExtension on EHentai {
         try {
           final calibreMetadata =
               CalibreMetadata.toMetadata(gmetadata, useExHentai: useExHentai);
-          if (chineseEHentai && transDbPath.isNotEmpty) {
-            await TranslateExtension.translate(transDbPath, calibreMetadata);
-          }
           metadataMap[id] = calibreMetadata;
         } catch (_) {
           rethrow;

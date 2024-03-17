@@ -283,9 +283,24 @@ extension TaskHandler on Downloader {
       if (books.isNotEmpty) {
         final book = books.first; // only one book
         final booksController = Get.find<BooksController>();
+
         if (settings.fetchMetadataAfterDownload.value) {
+          late final EHentai eHentai;
           try {
-            final eHentai = EHentai(settings: settings);
+            eHentai = EHentai(settings: settings);
+          } catch (e) {
+            logs.error('Failed to create EHentai: $e');
+            return;
+          }
+          if (eHentai.chineseEHentai && eHentai.transDbPath.isNotEmpty) {
+            try {
+              await eHentai.initTransDb(logs);
+            } catch (e) {
+              logs.error('Failed to init translation database: $e');
+              eHentai.transDb = null;
+            }
+          }
+          try {
             logs.info('Start to get metadata for 1 books');
             if (book.metadata.eHentaiUrl.isNotEmpty) {
               await eHentai.identify(
@@ -303,6 +318,8 @@ extension TaskHandler on Downloader {
                 id: book.id,
               );
             }
+            await eHentai.translateMetadata();
+            await eHentai.closeTransDb(logs);
             await BookHandler.updateMetadata(eHentai.metadataMap);
             book.metadata = eHentai.metadataMap[book.id]!;
             if (settings.saveOpf.value) {
