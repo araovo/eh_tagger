@@ -6,6 +6,7 @@
   "addBooksAfterDownload": "Add Books After Download",
   "addBooksSuccess": "{count} books added successfully",
   "addTasks": "Add Tasks",
+  "addTasksFailed": "{count} tasks failed to add, do you want to retry?",
   "appVersion": "App Version",
   "authors": "Authors",
   "bookCoverPath": "Book Cover Path",

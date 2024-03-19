@@ -153,23 +153,67 @@ class _DownloadPageState extends State<DownloadPage> {
     );
   }
 
-  Future<void> _addTasks() async {
+  Future<void> _addTasks(
+      {required bool retry, List<String>? failedUrls}) async {
     final downloader = Get.find<Downloader>();
-    final urls = await showDialog<List<String>>(
-      context: context,
-      builder: (context) => DialogInputUrls(
-        failedUrls: downloader.failedUrls,
-      ),
-    );
-    if (urls == null || urls.isEmpty) return;
-    final logs = Get.find<Logs>();
-    logs.info('Add tasks from: $urls');
-    await downloader.addtasks(urls).then((value) async {
-      if (value.isEmpty) {
-        return;
-      }
-      await _startTasks(value);
-    });
+    Future<void> addAndStart(List<String> urls) async {
+      final logs = Get.find<Logs>();
+      logs.info('Add tasks from: $urls');
+      await downloader.addtasks(urls).then((value) async {
+        if (value.isEmpty) {
+          return;
+        }
+        await _startTasks(value);
+      });
+    }
+
+    List<String>? urls;
+    final preFailedUrls = Set.from(downloader.failedUrls);
+    if (retry && failedUrls != null) {
+      urls = failedUrls;
+    } else {
+      urls = await showDialog<List<String>>(
+        context: context,
+        builder: (context) => DialogInputUrls(
+          failedUrls: downloader.failedUrls.toList(),
+        ),
+      );
+      if (urls == null || urls.isEmpty) return;
+    }
+
+    await addAndStart(urls);
+    final curFailedUrls = downloader.failedUrls;
+    final diffFailedUrls = curFailedUrls.difference(preFailedUrls).toList();
+    if (diffFailedUrls.isNotEmpty) {
+      if (!mounted) return;
+      final retryConfirm = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(AppLocalizations.of(context)!.addTasks),
+            content: Text(AppLocalizations.of(context)!
+                .addTasksFailed(downloader.failedUrls.length)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+                child: Text(AppLocalizations.of(context)!.no),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                },
+                child: Text(AppLocalizations.of(context)!.yes),
+              ),
+            ],
+          );
+        },
+      );
+      if (retryConfirm == null || !retryConfirm) return;
+      downloader.failedUrls.removeAll(diffFailedUrls);
+      await _addTasks(retry: true, failedUrls: diffFailedUrls);
+    }
   }
 
   Future<void> _openDownloadDir() async {
@@ -315,8 +359,9 @@ class _DownloadPageState extends State<DownloadPage> {
           color: theme.colorScheme.primary,
           icon: const Icon(Icons.add),
           tooltip: AppLocalizations.of(context)!.addTasks,
-          onPressed:
-              settings.dbInitialized ? () async => await _addTasks() : null,
+          onPressed: settings.dbInitialized
+              ? () async => await _addTasks(retry: false)
+              : null,
         ),
         IconButton(
           color: theme.colorScheme.primary,

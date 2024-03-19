@@ -6,6 +6,7 @@
   "addBooksAfterDownload": "下载后添加书籍",
   "addBooksSuccess": "{count} 本书籍添加成功",
   "addTasks": "添加任务",
+  "addTasksFailed": "{count} 个任务添加失败, 是否重试?",
   "appVersion": "应用版本",
   "authors": "作者",
   "bookCoverPath": "书籍封面路径",

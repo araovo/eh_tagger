@@ -14,7 +14,7 @@ class Downloader extends GetxController with EHentaiNetworkHandler {
   final taskDao = DownloadTasksDaoImpl();
   final _tasks = <DownloadTask>[].obs;
   final _cancelTokens = <int, CancelToken>{}; // id, cancelToken
-  final failedUrls = <String>[];
+  final failedUrls = <String>{};
 
   List<DownloadTask> get tasks => _tasks;
 
