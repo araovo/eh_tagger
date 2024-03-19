@@ -1,3 +1,7 @@
+// Copyright [2022] [jiangtian616]
+// SPDX-License-Identifier: Apache-2.0
+// Modifications Copyright [2024] [araovo]
+
 import 'dart:async';
 
 import 'package:eh_tagger/src/app/constants.dart';
@@ -12,7 +16,7 @@ class TaskMonitor {
 
   void start() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       final receivedBytesDiff = receivedBytes - prevReceivedBytes;
       prevReceivedBytes = receivedBytes;
       final speed = _formatSpeed(receivedBytesDiff.toDouble());
