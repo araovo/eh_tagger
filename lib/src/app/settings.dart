@@ -17,6 +17,7 @@ class Settings extends GetxController {
   final RxString _ipbMemberId;
   final RxString _ipbPassHash;
   final RxString _igneous;
+  final RxBool _showFailedUrls;
   final RxBool _addBooksAfterDownload;
   final RxBool _fetchMetadataAfterDownload;
   final RxBool _delSourceBooks;
@@ -39,6 +40,7 @@ class Settings extends GetxController {
     this._ipbMemberId,
     this._ipbPassHash,
     this._igneous,
+    this._showFailedUrls,
     this._addBooksAfterDownload,
     this._fetchMetadataAfterDownload,
     this._delSourceBooks,
@@ -60,6 +62,7 @@ class Settings extends GetxController {
       config.ipbMemberId.obs,
       config.ipbPassHash.obs,
       config.igneous.obs,
+      config.showFailedUrls.obs,
       config.addBooksAfterDownload.obs,
       config.fetchMetadataAfterDownload.obs,
       config.delSourceBooks.obs,
@@ -139,6 +142,8 @@ extension SettingsExtension on Settings {
 
   RxString get igneous => _igneous;
 
+  RxBool get showFailedUrls => _showFailedUrls;
+
   RxBool get addBooksAfterDownload => _addBooksAfterDownload;
 
   RxBool get fetchMetadataAfterDownload => _fetchMetadataAfterDownload;
@@ -217,6 +222,12 @@ extension SettingsExtension on Settings {
   void setIgneous(String value) {
     _igneous.value = value;
     _config.igneous = value;
+    _saveConfig();
+  }
+
+  void setShowFailedUrls(bool value) {
+    _showFailedUrls.value = value;
+    _config.showFailedUrls = value;
     _saveConfig();
   }
 

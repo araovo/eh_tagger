@@ -172,10 +172,11 @@ class _DownloadPageState extends State<DownloadPage> {
     if (retry && failedUrls != null) {
       urls = failedUrls;
     } else {
+      final showFailedUrls = Get.find<Settings>().showFailedUrls.value;
       urls = await showDialog<List<String>>(
         context: context,
         builder: (context) => DialogInputUrls(
-          failedUrls: downloader.failedUrls.toList(),
+          failedUrls: showFailedUrls ? downloader.failedUrls.toList() : [],
         ),
       );
       if (urls == null || urls.isEmpty) return;

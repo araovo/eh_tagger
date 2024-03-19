@@ -65,6 +65,7 @@
   "selectAll": "全选",
   "selectRange": "选择范围",
   "settings": "设置",
+  "showFailedUrls": "显示失败链接",
   "startTasks": "开始任务",
   "system": "系统",
   "tags": "标签",

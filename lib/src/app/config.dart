@@ -13,6 +13,7 @@ class Config {
   String ipbMemberId;
   String ipbPassHash;
   String igneous;
+  bool showFailedUrls;
   bool addBooksAfterDownload;
   bool fetchMetadataAfterDownload;
   bool delSourceBooks;
@@ -32,6 +33,7 @@ class Config {
     required this.ipbMemberId,
     required this.ipbPassHash,
     required this.igneous,
+    required this.showFailedUrls,
     required this.addBooksAfterDownload,
     required this.fetchMetadataAfterDownload,
     required this.delSourceBooks,
@@ -52,6 +54,7 @@ class Config {
         ipbMemberId: '',
         ipbPassHash: '',
         igneous: '',
+        showFailedUrls: false,
         addBooksAfterDownload: false,
         fetchMetadataAfterDownload: false,
         delSourceBooks: false,

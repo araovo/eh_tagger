@@ -153,6 +153,16 @@ class SettingsPage extends StatelessWidget {
       ]),
       buildSettingItems([
         SettingItem(
+          name: AppLocalizations.of(context)!.showFailedUrls,
+          icon: Icons.error,
+          widget: Obx(
+            () => Switch(
+              value: settings.showFailedUrls.value,
+              onChanged: (value) => settings.setShowFailedUrls(value),
+            ),
+          ),
+        ),
+        SettingItem(
           name: AppLocalizations.of(context)!.addBooksAfterDownload,
           icon: Icons.add_box,
           widget: Obx(
