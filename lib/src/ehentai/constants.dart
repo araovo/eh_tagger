@@ -48,9 +48,15 @@ const userAgent =
 const httpTimeout = Duration(seconds: 2);
 const retries = 5;
 const retryDelays = [
-  Duration(seconds: 1),
-  Duration(seconds: 1),
-  Duration(seconds: 1)
+  Duration(milliseconds: 200),
+  Duration(milliseconds: 200),
+  Duration(milliseconds: 200),
+  Duration(milliseconds: 200),
+  Duration(milliseconds: 200),
 ];
+const hentaiAtHomeDuration = Duration(seconds: 2);
+const hentaiAtHomeTimeout = Duration(seconds: 10);
+const archiveDownloadPageString =
+    'The file was successfully prepared, and is ready for download.';
 const downloadStartSuffix = '?start=1';
 const downloadThreshold = 9;

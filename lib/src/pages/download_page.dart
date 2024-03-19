@@ -159,7 +159,8 @@ class _DownloadPageState extends State<DownloadPage> {
       builder: (context) => const DialogInputUrls(),
     );
     if (urls == null || urls.isEmpty) return;
-
+    final logs = Get.find<Logs>();
+    logs.info('Add tasks from: $urls');
     final downloader = Get.find<Downloader>();
     await downloader.addtasks(urls).then((value) async {
       if (value.isEmpty) {

@@ -7,7 +7,7 @@ import 'package:eh_tagger/src/app/storage.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:eh_tagger/src/calibre/opf.dart';
 import 'package:eh_tagger/src/downloader/downloader.dart';
-import 'package:eh_tagger/src/downloader/progress_monitor.dart';
+import 'package:eh_tagger/src/downloader/task_monitor.dart';
 import 'package:eh_tagger/src/downloader/task.dart';
 import 'package:eh_tagger/src/ehentai/archive.dart';
 import 'package:eh_tagger/src/ehentai/ehentai.dart';
@@ -24,7 +24,7 @@ extension TaskHandler on Downloader {
         try {
           archives.add(await getArchiveData(url));
         } catch (e) {
-          logs.error('Failed to get archive url for $url: $e');
+          logs.error('Failed to get archive for $url: $e');
         }
       }());
     }

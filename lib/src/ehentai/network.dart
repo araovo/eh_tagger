@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -101,19 +102,71 @@ mixin EHentaiNetworkHandler {
     if (gidlist == null) {
       throw Exception('Failed to get gidlist: $eHentaiUrl');
     }
+
     // get archive page url
     final galleryRaw = await getHtmlContent(eHentaiUrl);
     // parse "<a href="#" onclick="return popUp('url',480,320)">Archive Download</a></p>"
-    final pagePatten = RegExp(
+    final archivePagePatten = RegExp(
         r'''onclick="return popUp\('(.*?)',\d+,\d+\)">Archive Download''');
-    final pageMatch = pagePatten.firstMatch(galleryRaw);
-    if (pageMatch == null) {
-      throw Exception('Failed to get archive link');
+    final archivePageMatch = archivePagePatten.firstMatch(galleryRaw);
+    if (archivePageMatch == null) {
+      throw Exception('Failed to get archive url: $galleryRaw');
     }
     final htmlUnescape = HtmlUnescape();
-    final archivePageUrl = htmlUnescape.convert(pageMatch.group(1)!);
+    final archivePageUrl = htmlUnescape.convert(archivePageMatch.group(1)!);
 
     // post to archive page
+    final archivePageRaw = await _postToArchivePage(archivePageUrl);
+
+    // parse "document.location = "url""
+    final urlPatten = RegExp(r'document.location = "(.+)"');
+    final urlMatch = urlPatten.firstMatch(archivePageRaw);
+    if (urlMatch == null) {
+      throw Exception('Failed to get archive download url: $archivePageRaw');
+    }
+    final archiveDownloadPageUrl = urlMatch.group(1)!;
+
+    // get archive raw
+    String archiveDownloadPageRaw;
+    try {
+      archiveDownloadPageRaw = await _runArchiveTask(
+        task: _getArchiveDownloadPage,
+        url: archiveDownloadPageUrl,
+        verificationString: archiveDownloadPageString,
+      );
+      if (!archiveDownloadPageRaw.contains(archiveDownloadPageString)) {
+        throw Exception(
+            'Failed to get archive download page: $archiveDownloadPageRaw');
+      }
+    } catch (e) {
+      rethrow;
+    }
+
+    // parse <strong>name</strong>
+    final namePatten = RegExp(r'<strong>(.+)</strong>');
+    final nameMatch = namePatten.firstMatch(archiveDownloadPageRaw);
+    if (nameMatch == null) {
+      throw Exception('Failed to get archive name: $archiveDownloadPageRaw');
+    }
+    final name = nameMatch.group(1)!;
+
+    // get size
+    final archiveUrl = '$archiveDownloadPageUrl$downloadStartSuffix';
+    final responseHead = await dio.head(archiveUrl);
+    final size = responseHead.headers.value('content-length');
+    if (size == null) {
+      throw Exception('Failed to get archive size: ${responseHead.headers}');
+    }
+
+    return EHArchive(
+      name: name,
+      size: int.parse(size),
+      galleryUrl: eHentaiUrl,
+      archiveUrl: archiveUrl,
+    );
+  }
+
+  Future<String> _postToArchivePage(String archivePageUrl) async {
     final formData = FormData.fromMap({
       'dltype': 'org',
       'dlcheck': 'Download Original Archive',
@@ -125,56 +178,58 @@ mixin EHentaiNetworkHandler {
 
     if (response.statusCode != HttpStatus.ok) {
       if (response.statusCode != HttpStatus.found) {
-        throw Exception('Failed to post to $archivePageUrl');
+        throw Exception(
+            'Failed to post to $archivePageUrl: ${response.statusCode}');
       }
     }
     if (response.statusCode == HttpStatus.found) {
       // redirect to new page
-      final newPageUrl = response.headers.value('location');
-      if (newPageUrl == null) {
-        throw Exception('Failed to get archive link');
+      final redirectedPageUrl = response.headers.value('location');
+      if (redirectedPageUrl == null) {
+        throw Exception(
+            'Failed to get archive download page: ${response.data}');
       }
-      final newResponse = await dio.get(newPageUrl);
-      if (newResponse.statusCode != HttpStatus.ok) {
-        throw Exception('Failed to get $newPageUrl');
+      final redirectedResponse = await dio.get(redirectedPageUrl);
+      if (redirectedResponse.statusCode != HttpStatus.ok) {
+        throw Exception(
+            'Failed to get archive download page: ${redirectedResponse.statusCode}');
       }
-      result = newResponse.data as String;
+      result = redirectedResponse.data as String;
     } else {
       result = response.data as String;
     }
+    return result;
+  }
 
-    // parse "document.location = "url""
-    final urlPatten = RegExp(r'document.location = "(.+)"');
-    final urlMatch = urlPatten.firstMatch(result);
-    if (urlMatch == null) {
-      throw Exception('Failed to get archive link');
-    }
-    final archiveDownloadPageUrl = urlMatch.group(1)!;
+  Future<String> _getArchiveDownloadPage(String archiveDownloadPageUrl) async {
+    return await getHtmlContent(archiveDownloadPageUrl);
+  }
 
-    // get archive raw
-    final pageRaw = await getHtmlContent(archiveDownloadPageUrl);
-    // parse <strong>name</strong>
-    final namePatten = RegExp(r'<strong>(.+)</strong>');
-    final nameMatch = namePatten.firstMatch(pageRaw);
-    if (nameMatch == null) {
-      throw Exception('Failed to get archive name');
-    }
-    final name = nameMatch.group(1)!;
+  Future<String> _runArchiveTask({
+    required Future<String> Function(String) task,
+    required String url,
+    required String verificationString,
+  }) async {
+    String result = '';
+    final completer = Completer<String>();
+    Timer? timer;
+    timer = Timer.periodic(hentaiAtHomeDuration, (_) async {
+      try {
+        result = await task(url);
+        if (result.contains(verificationString)) {
+          timer?.cancel();
+          completer.complete(result);
+        }
+      } catch (e) {
+        timer?.cancel();
+        completer.completeError(e);
+      }
+    });
 
-    // get size
-    final archiveUrl = '$archiveDownloadPageUrl$downloadStartSuffix';
-    final responseHead = await dio.head(archiveUrl);
-    final size = responseHead.headers.value('content-length');
-    if (size == null) {
-      throw Exception('Failed to get archive size');
-    }
-
-    return EHArchive(
-      name: name,
-      size: int.parse(size),
-      galleryUrl: eHentaiUrl,
-      archiveUrl: archiveUrl,
-    );
+    return completer.future.timeout(hentaiAtHomeTimeout, onTimeout: () {
+      timer?.cancel();
+      return result;
+    });
   }
 
   List<List<String>>? getGidlist(String raw) {
