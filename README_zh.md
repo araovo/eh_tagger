@@ -6,14 +6,13 @@
 
 # 主要特点
 
-- 支持通过 E-Hentai/ExHentai 画廊 URL 下载原始归档文件 (需要 cookies).
-- 支持导入书籍时, 输入对应的 E-Hentai/ExHentai 画廊 URL.
-- 支持通过 cookies 登录 ExHentai.
+- 通过 cookies 访问 ExHentai 画廊.
+- 通过 E-Hentai/ExHentai 画廊 URL 批量下载原始归档文件.
 - 通过标题和作者查找 E-Hentai/ExHentai 画廊.
-- 通过 E-Hentai 的 API 获取画廊元数据, 包括标题, 作者, 标签等
-- 支持通过代理访问 E-Hentai.
+- 通过 E-Hentai 的 API 获取画廊元数据, 包括标题, 作者, 标签等.
 - 使用中文翻译数据库为画廊打标签, 支持软件内更新数据库.
 - 编辑书籍的元数据和 E-Hentai/ExHentai 画廊 URL (不如 Calibre 那么强大).
+- 支持通过代理访问 E-Hentai.
 - 将书籍添加到 Calibre 数据库.
 
 # 需要注意的事项
@@ -39,3 +38,4 @@
 - [Calibre](https://github.com/kovidgoyal/calibre) 获取元数据 `tokens` 的方法, 以及 `calibredb` 命令.
 - [Ehentai_metadata](https://github.com/nonpricklycactus/Ehentai_metadata) E-Hentai 元数据获取的方法.
 - [Database](https://github.com/EhTagTranslation/Database) 中文翻译数据库.
+- [JHentai](https://github.com/jiangtian616/JHenTai) 下载管理器的参考实现.

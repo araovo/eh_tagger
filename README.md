@@ -6,14 +6,13 @@ A tagger for E-Hentai galleries, written in Flutter, and can be used to import E
 
 # Features
 
-- Support downloading the original archive file from E-Hentai/ExHentai gallery URLs (requires cookies).
-- Support importing books by entering the corresponding E-Hentai/ExHentai gallery URL.
-- Support logging into ExHentai with cookies.
+- Access ExHentai galleries through cookies.
+- Batch download the original archive files through the E-Hentai/ExHentai gallery URL.
 - Find E-Hentai/ExHentai galleries by title and author.
 - Get gallery metadata from E-Hentai's API, including title, author, tags, etc.
-- Support accessing E-Hentai through a proxy.
 - Use the Chinese translation database to tag galleries, and support updating the database within the software.
 - Edit the metadata of books and the E-Hentai/ExHentai gallery URL (not as powerful as Calibre).
+- Support accessing E-Hentai through a proxy.
 - Add books to the Calibre database.
 
 # Notes
@@ -21,7 +20,7 @@ A tagger for E-Hentai galleries, written in Flutter, and can be used to import E
 - Please back up your Calibre database to avoid accidents caused by force majeure.
 - Pay attention to the log output to understand the running status of the program.
 - The software only supports HTTP proxies.
-- The software uses the `calibredb` command to operate the Calibre database. Please make sure that Calibre is installed
+- The software uses the `calibredb` command to operate the Calibre database. Please make sure that Calibre is installed.
   on your system and the `calibredb` command can be used normally.
 - `calibredb` may run inefficiently on network drives such as NAS drives. You can enable network drive optimization, and the metadata and books will be copied to the remote folder after being imported locally.
 - On the Linux platform, make sure that the system has installed the `libsqlite3` and `libsqlite3-dev` packages.
@@ -42,3 +41,4 @@ This project is made possible by the following resources:
 - [Ehentai_metadata](https://github.com/nonpricklycactus/Ehentai_metadata) for the method of obtaining E-Hentai
   metadata.
 - [Database](https://github.com/EhTagTranslation/Database) for the Chinese translation database.
+- [JHentai](https://github.com/jiangtian616/JHenTai) for the reference implementation of the download manager.
