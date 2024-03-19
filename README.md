@@ -41,4 +41,4 @@ This project is made possible by the following resources:
 - [Ehentai_metadata](https://github.com/nonpricklycactus/Ehentai_metadata) for the method of obtaining E-Hentai
   metadata.
 - [Database](https://github.com/EhTagTranslation/Database) for the Chinese translation database.
-- [JHentai](https://github.com/jiangtian616/JHenTai) for the reference implementation of the download manager.
+- [JHenTai](https://github.com/jiangtian616/JHenTai) for the reference implementation of the download manager.

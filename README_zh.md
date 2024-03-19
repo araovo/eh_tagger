@@ -38,4 +38,4 @@
 - [Calibre](https://github.com/kovidgoyal/calibre) 获取元数据 `tokens` 的方法, 以及 `calibredb` 命令.
 - [Ehentai_metadata](https://github.com/nonpricklycactus/Ehentai_metadata) E-Hentai 元数据获取的方法.
 - [Database](https://github.com/EhTagTranslation/Database) 中文翻译数据库.
-- [JHentai](https://github.com/jiangtian616/JHenTai) 下载管理器的参考实现.
+- [JHenTai](https://github.com/jiangtian616/JHenTai) 下载管理器的参考实现.
