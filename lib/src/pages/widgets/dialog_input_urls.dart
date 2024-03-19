@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class DialogInputUrls extends StatefulWidget {
-  const DialogInputUrls({super.key});
+  final List<String> failedUrls;
+
+  const DialogInputUrls({
+    super.key,
+    required this.failedUrls,
+  });
 
   @override
   State<DialogInputUrls> createState() => _DialogInputUrlsState();
@@ -10,6 +15,15 @@ class DialogInputUrls extends StatefulWidget {
 
 class _DialogInputUrlsState extends State<DialogInputUrls> {
   final _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.failedUrls.isNotEmpty) {
+      _controller.text = widget.failedUrls.join('\n');
+      _controller.text += '\n';
+    }
+  }
 
   @override
   void dispose() {

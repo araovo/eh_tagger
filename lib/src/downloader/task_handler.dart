@@ -24,7 +24,8 @@ extension TaskHandler on Downloader {
         try {
           archives.add(await getArchiveData(url));
         } catch (e) {
-          logs.error('Failed to get archive for $url: $e');
+          logs.error('Failed to get archive from $url: $e');
+          failedUrls.add(url);
         }
       }());
     }

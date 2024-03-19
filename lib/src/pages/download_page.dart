@@ -8,7 +8,7 @@ import 'package:eh_tagger/src/downloader/downloader.dart';
 import 'package:eh_tagger/src/downloader/task.dart';
 import 'package:eh_tagger/src/downloader/task_handler.dart';
 import 'package:eh_tagger/src/pages/widgets/page.dart';
-import 'package:eh_tagger/src/pages/widgets/setting_item/dialog_input_urls.dart';
+import 'package:eh_tagger/src/pages/widgets/dialog_input_urls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
@@ -154,14 +154,16 @@ class _DownloadPageState extends State<DownloadPage> {
   }
 
   Future<void> _addTasks() async {
+    final downloader = Get.find<Downloader>();
     final urls = await showDialog<List<String>>(
       context: context,
-      builder: (context) => const DialogInputUrls(),
+      builder: (context) => DialogInputUrls(
+        failedUrls: downloader.failedUrls,
+      ),
     );
     if (urls == null || urls.isEmpty) return;
     final logs = Get.find<Logs>();
     logs.info('Add tasks from: $urls');
-    final downloader = Get.find<Downloader>();
     await downloader.addtasks(urls).then((value) async {
       if (value.isEmpty) {
         return;
