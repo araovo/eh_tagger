@@ -28,7 +28,7 @@ class _BooksPageState extends State<BooksPage> {
   bool _saveButtonEnabled = true;
   int? _selectedBookId;
   final _multiSelectedBookId = <int>{};
-  final _coverBytes = Uint8List(0).obs;
+  var _coverBytes = Uint8List(0);
 
   Widget buildBookList(bool isDarkMode) {
     final books = Get.find<BooksController>().books;
@@ -93,14 +93,14 @@ class _BooksPageState extends State<BooksPage> {
                           if (_selectedBookId != null &&
                               bookId == _selectedBookId) {
                             _selectedBookId = null;
-                            _coverBytes.value = Uint8List(0);
+                            _coverBytes = Uint8List(0);
                           } else {
                             _selectedBookId = bookId;
                             final cover = File(books[index].coverPath);
                             if (await cover.exists()) {
-                              _coverBytes.value = await cover.readAsBytes();
+                              _coverBytes = await cover.readAsBytes();
                             } else {
-                              _coverBytes.value = Uint8List(0);
+                              _coverBytes = Uint8List(0);
                             }
                           }
                           setState(() {});
@@ -191,18 +191,12 @@ class _BooksPageState extends State<BooksPage> {
           children: [
             const SizedBox(height: 12),
             if (_selectedBookId != null) ...[
-              Obx(() {
-                if (_coverBytes.value.isNotEmpty) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.memory(_coverBytes.value),
-                      const Divider()
-                    ],
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
+              _coverBytes.isEmpty
+                  ? const SizedBox.shrink()
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [Image.memory(_coverBytes), const Divider()],
+                    ),
               if (title.isNotEmpty)
                 Text(
                   title,
@@ -270,9 +264,9 @@ class _BooksPageState extends State<BooksPage> {
       final book = Get.find<BooksController>().getBook(index);
       final cover = File(book.coverPath);
       if (await cover.exists()) {
-        _coverBytes.value = await cover.readAsBytes();
+        _coverBytes = await cover.readAsBytes();
       } else {
-        _coverBytes.value = Uint8List(0);
+        _coverBytes = Uint8List(0);
       }
     }
     setState(() {});
