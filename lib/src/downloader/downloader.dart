@@ -25,7 +25,7 @@ class Downloader extends GetxController with EHentaiNetworkHandler {
     required this.logs,
   }) {
     initDio(
-      useCookie: true,
+      useCookie: settings.useExHentai.value,
       useProxy: settings.useProxy.value,
       proxyLink: settings.proxyLink.value,
       ipbMemberId: settings.ipbMemberId.value,

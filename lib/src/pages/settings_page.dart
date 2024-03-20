@@ -13,6 +13,16 @@ import 'package:get/get.dart';
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
+  void _updateCookie(Settings settings) {
+    final downloader = Get.find<Downloader>();
+    downloader.setCookie(
+      useCookie: settings.useExHentai.value,
+      ipbMemberId: settings.ipbMemberId.value,
+      ipbPassHash: settings.ipbPassHash.value,
+      igneous: settings.igneous.value,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -97,7 +107,10 @@ class SettingsPage extends StatelessWidget {
           widget: Obx(
             () => Switch(
               value: settings.useExHentai.value,
-              onChanged: (value) => settings.setUseExHentai(value),
+              onChanged: (value) {
+                settings.setUseExHentai(value);
+                _updateCookie(settings);
+              },
             ),
           ),
         ),
@@ -133,21 +146,30 @@ class SettingsPage extends StatelessWidget {
           name: AppLocalizations.of(context)!.ipbMemberId,
           icon: Icons.person,
           rxString: settings.ipbMemberId,
-          updateValue: (value) => settings.setIpbMemberId(value),
+          updateValue: (value) {
+            settings.setIpbMemberId(value);
+            _updateCookie(settings);
+          },
           hideText: true,
         ),
         DialogInputItem(
           name: AppLocalizations.of(context)!.ipbPassHash,
           icon: Icons.password,
           rxString: settings.ipbPassHash,
-          updateValue: (value) => settings.setIpbPassHash(value),
+          updateValue: (value) {
+            settings.setIpbPassHash(value);
+            _updateCookie(settings);
+          },
           hideText: true,
         ),
         DialogInputItem(
           name: AppLocalizations.of(context)!.igneous,
           icon: Icons.cookie,
           rxString: settings.igneous,
-          updateValue: (value) => settings.setIgneous(value),
+          updateValue: (value) {
+            settings.setIgneous(value);
+            _updateCookie(settings);
+          },
           hideText: true,
         ),
       ]),

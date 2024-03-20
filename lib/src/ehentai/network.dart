@@ -50,34 +50,51 @@ mixin EHentaiNetworkHandler {
         },
       );
     }
-    if (useCookie) {
-      if (ipbMemberId.isEmpty || ipbPassHash.isEmpty || igneous.isEmpty) {
-        throw Exception('Cookies are required');
-      }
-      logs.info('Using cookies');
-      cookies.addAll([
-        {
-          'name': 'ipb_member_id',
-          'value': ipbMemberId,
-          'domain': '.exhentai.org',
-          'path': '/'
-        },
-        {
-          'name': 'ipb_pass_hash',
-          'value': ipbPassHash,
-          'domain': '.exhentai.org',
-          'path': '/'
-        },
-        {
-          'name': 'igneous',
-          'value': igneous,
-          'domain': '.exhentai.org',
-          'path': '/'
-        },
-      ]);
-      dio.options.headers['Cookie'] =
-          cookies.map((e) => '${e['name']}=${e['value']}').toList().join('; ');
+    setCookie(
+      useCookie: useCookie,
+      ipbMemberId: ipbMemberId,
+      ipbPassHash: ipbPassHash,
+      igneous: igneous,
+    );
+  }
+
+  void setCookie({
+    required bool useCookie,
+    required String ipbMemberId,
+    required String ipbPassHash,
+    required String igneous,
+  }) {
+    final logs = Get.find<Logs>();
+    if (!useCookie) {
+      logs.info('Disabling cookie for download tasks');
+      dio.options.headers.remove('Cookie');
     }
+    if (ipbMemberId.isEmpty || ipbPassHash.isEmpty || igneous.isEmpty) {
+      throw Exception('Cookies are required');
+    }
+    logs.info('Using cookie for download tasks');
+    cookies.addAll([
+      {
+        'name': 'ipb_member_id',
+        'value': ipbMemberId,
+        'domain': '.exhentai.org',
+        'path': '/'
+      },
+      {
+        'name': 'ipb_pass_hash',
+        'value': ipbPassHash,
+        'domain': '.exhentai.org',
+        'path': '/'
+      },
+      {
+        'name': 'igneous',
+        'value': igneous,
+        'domain': '.exhentai.org',
+        'path': '/'
+      },
+    ]);
+    dio.options.headers['Cookie'] =
+        cookies.map((e) => '${e['name']}=${e['value']}').toList().join('; ');
   }
 
   Future<String> getHtmlContent(String url) async {
