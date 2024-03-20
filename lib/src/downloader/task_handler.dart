@@ -66,7 +66,8 @@ extension TaskHandler on Downloader {
     final task = tasks[index];
 
     if (task.status.value != TaskStatus.paused &&
-        task.status.value != TaskStatus.canceled) {
+        task.status.value != TaskStatus.canceled &&
+        task.status.value != TaskStatus.failed) {
       return;
     }
 
