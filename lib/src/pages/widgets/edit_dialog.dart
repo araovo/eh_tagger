@@ -79,9 +79,11 @@ class _EditDialogState extends State<EditDialog> {
         }
         final src = File(_result!.files.single.path!);
         final ext = extension(src.path);
-        await src.copy(join(_currentBook.dir, 'cover$ext'));
+        final editedPath = join(_currentBook.dir, 'cover$ext');
+        await src.copy(editedPath);
         setState(() {
-          _coverPathController.text = _currentBook.coverPath;
+          _coverPathController.text = editedPath;
+          _currentBook.coverPath = editedPath;
         });
       }
       await booksDao.updateBook(_currentBook);
