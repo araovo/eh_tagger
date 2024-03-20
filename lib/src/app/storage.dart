@@ -14,13 +14,8 @@ class AppStorage {
   static late final String tempPath;
 
   static Future<void> init() async {
-    if (Platform.isMacOS) {
-      final libraryDirectory = await getLibraryDirectory();
-      libraryPath = join(libraryDirectory.path, packageName);
-    } else {
-      final documentsDirectory = await getApplicationDocumentsDirectory();
-      libraryPath = join(documentsDirectory.path, packageName);
-    }
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    libraryPath = join(documentsDirectory.path, packageName);
     configPath = join(libraryPath, configFileName);
     dbPath = join(libraryPath, dbFileName);
     transDbPath = join(libraryPath, transDbFileName);
