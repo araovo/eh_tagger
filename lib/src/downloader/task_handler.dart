@@ -57,14 +57,12 @@ extension TaskHandler on Downloader {
         ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
     final futures = <Future>[];
     for (final index in indexes) {
-      futures.add(_startTask(index));
+      futures.add(_startTask(tasks[index]));
     }
     await Future.wait(futures);
   }
 
-  Future<void> _startTask(int index) async {
-    final task = tasks[index];
-
+  Future<void> _startTask(DownloadTask task) async {
     if (task.status.value != TaskStatus.paused &&
         task.status.value != TaskStatus.canceled &&
         task.status.value != TaskStatus.failed) {
@@ -95,7 +93,7 @@ extension TaskHandler on Downloader {
       } else {
         logs.info('File already exists: ${task.path}');
         await _updateTaskStatus(
-          index: index,
+          task: task,
           status: TaskStatus.completed,
           writeToDb: true,
         );
@@ -115,7 +113,7 @@ extension TaskHandler on Downloader {
       preserveHeaderCase: true,
     );
     await _updateTaskStatus(
-        index: index, status: TaskStatus.running, writeToDb: true);
+        task: task, status: TaskStatus.running, writeToDb: true);
     final monitor = TaskMonitor()..receivedBytes = bytes;
     monitor.start();
     await dio.download(
@@ -127,58 +125,53 @@ extension TaskHandler on Downloader {
       onReceiveProgress: (received, total) {
         final receivedBytes = bytes + received;
         final progress = receivedBytes / task.size;
-        _updateTaskProgress(index: index, progress: progress);
+        _updateTaskProgress(task: task, progress: progress);
         monitor.updateReceivedBytes(receivedBytes);
-        _updateTaskSpeed(index: index, speed: monitor.speed);
+        _updateTaskSpeed(task: task, speed: monitor.speed);
       },
       options: options,
-    ).then((response) {
+    ).then((response) async {
       logs.info('Download completed: ${task.name}');
       monitor.stop();
-      _updateTaskStatus(
-          index: index, status: TaskStatus.completed, writeToDb: true);
-      _updateTaskProgress(index: index, progress: 1, writeToDb: true);
-      _updateTaskSpeed(index: index, speed: '');
-      _onTaskComplete(task);
-    }).catchError((e) {
+      await _updateTaskStatus(
+          task: task, status: TaskStatus.completed, writeToDb: true);
+      await _updateTaskProgress(task: task, progress: 1, writeToDb: true);
+      _updateTaskSpeed(task: task, speed: '');
+      await _onTaskComplete(task);
+    }).catchError((e) async {
       monitor.stop();
       if (e is DioException) {
         if (CancelToken.isCancel(e)) {
           // ignore
         } else if (e.response?.statusCode == HttpStatus.gone ||
             e.response?.statusCode == HttpStatus.ok) {
-          logs.error('Download failed: ${task.name}: ${e.response?.data}');
-          _updateTaskStatus(
-              index: index, status: TaskStatus.failed, writeToDb: true);
-          _updateTaskProgress(index: index, progress: 0, writeToDb: true);
-          _updateTaskSpeed(index: index, speed: '');
+          await _handleError(task, e.response?.data);
         } else {
-          logs.error('Download failed: ${task.name}: $e');
-          _updateTaskStatus(
-              index: index, status: TaskStatus.failed, writeToDb: true);
-          _updateTaskProgress(index: index, progress: 0, writeToDb: true);
-          _updateTaskSpeed(index: index, speed: '');
+          await _handleError(task, e);
         }
       } else {
-        logs.error('Download failed: ${task.name}: $e');
-        _updateTaskStatus(
-            index: index, status: TaskStatus.failed, writeToDb: true);
-        _updateTaskProgress(index: index, progress: 0, writeToDb: true);
-        _updateTaskSpeed(index: index, speed: '');
+        await _handleError(task, e);
       }
     });
+  }
+
+  Future<void> _handleError(DownloadTask task, dynamic e) async {
+    logs.error('Download failed: ${task.name}: $e');
+    await _updateTaskStatus(
+        task: task, status: TaskStatus.failed, writeToDb: true);
+    await _updateTaskProgress(task: task, progress: 0, writeToDb: true);
+    _updateTaskSpeed(task: task, speed: '');
   }
 
   Future<void> pauseTasks(Iterable<int> ids) async {
     final indexes =
         ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
     for (final index in indexes) {
-      await _pauseTask(index);
+      await _pauseTask(tasks[index]);
     }
   }
 
-  Future<void> _pauseTask(int index) async {
-    final task = tasks[index];
+  Future<void> _pauseTask(DownloadTask task) async {
     if (task.status.value != TaskStatus.running) {
       return;
     }
@@ -188,10 +181,10 @@ extension TaskHandler on Downloader {
         logs.info('Download paused: ${task.name}');
         final progress = task.progress.value;
         await _updateTaskStatus(
-            index: index, status: TaskStatus.paused, writeToDb: true);
+            task: task, status: TaskStatus.paused, writeToDb: true);
         await _updateTaskProgress(
-            index: index, progress: progress, writeToDb: true);
-        _updateTaskSpeed(index: index, speed: '');
+            task: task, progress: progress, writeToDb: true);
+        _updateTaskSpeed(task: task, speed: '');
       }
     }
   }
@@ -200,12 +193,11 @@ extension TaskHandler on Downloader {
     final indexes =
         ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
     for (final index in indexes) {
-      await _cancelTask(index);
+      await _cancelTask(tasks[index]);
     }
   }
 
-  Future<void> _cancelTask(int index) async {
-    final task = tasks[index];
+  Future<void> _cancelTask(DownloadTask task) async {
     if (task.status.value == TaskStatus.completed) {
       return;
     }
@@ -217,9 +209,9 @@ extension TaskHandler on Downloader {
     }
     logs.info('Download canceled: ${task.name}');
     await _updateTaskStatus(
-        index: index, status: TaskStatus.canceled, writeToDb: true);
-    await _updateTaskProgress(index: index, progress: 0, writeToDb: true);
-    _updateTaskSpeed(index: index, speed: '');
+        task: task, status: TaskStatus.canceled, writeToDb: true);
+    await _updateTaskProgress(task: task, progress: 0, writeToDb: true);
+    _updateTaskSpeed(task: task, speed: '');
     final file = File(task.path);
     if (await file.exists()) {
       logs.info('Delete file: ${task.path}');
@@ -231,12 +223,11 @@ extension TaskHandler on Downloader {
     final indexes =
         ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
     for (final index in indexes) {
-      await _deleteTask(index);
+      await _deleteTask(tasks[index]);
     }
   }
 
-  Future<void> _deleteTask(int index) async {
-    final task = tasks[index];
+  Future<void> _deleteTask(DownloadTask task) async {
     if (cancelTokens.containsKey(task.id)) {
       if (!cancelTokens[task.id]!.isCancelled) {
         cancelTokens[task.id]!.cancel();
@@ -246,7 +237,7 @@ extension TaskHandler on Downloader {
     final file = File(task.path);
     logs.info('Remove download task: ${task.name}');
     await taskDao.deleteTask(id: task.id);
-    tasks.removeAt(index);
+    tasks.remove(task);
     if (await file.exists()) {
       logs.info('Delete file: ${task.path}');
       await file.delete();
@@ -338,31 +329,31 @@ extension TaskHandler on Downloader {
   }
 
   Future<void> _updateTaskStatus({
-    required int index,
+    required DownloadTask task,
     required TaskStatus status,
     bool? writeToDb,
   }) async {
-    tasks[index].status.value = status;
+    task.status.value = status;
     if (writeToDb != null && writeToDb) {
-      await taskDao.updateStatus(id: tasks[index].id, status: status.index);
+      await taskDao.updateStatus(id: task.id, status: status.index);
     }
   }
 
   Future<void> _updateTaskProgress({
-    required int index,
+    required DownloadTask task,
     required double progress,
     bool? writeToDb,
   }) async {
-    tasks[index].progress.value = progress;
+    task.progress.value = progress;
     if (writeToDb != null && writeToDb) {
-      await taskDao.updateProgress(id: tasks[index].id, progress: progress);
+      await taskDao.updateProgress(id: task.id, progress: progress);
     }
   }
 
   void _updateTaskSpeed({
-    required int index,
+    required DownloadTask task,
     required String speed,
   }) {
-    tasks[index].speed.value = speed;
+    task.speed.value = speed;
   }
 }
