@@ -18,7 +18,7 @@ class AppWindow extends StatefulWidget {
 class _AppWindowState extends State<AppWindow> {
   int _index = 0;
 
-  Future<void> transDbTask() async {
+  Future<void> _transDbTask() async {
     final settings = Get.find<Settings>();
     final transDbVersion = settings.transDbVersion.value;
     if (transDbVersion.isEmpty) {
@@ -90,7 +90,7 @@ class _AppWindowState extends State<AppWindow> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(Duration.zero, () async {
-        await transDbTask();
+        await _transDbTask();
       });
     });
   }

@@ -30,7 +30,7 @@ class _BooksPageState extends State<BooksPage> {
   final _multiSelectedBookId = <int>{};
   var _coverBytes = Uint8List(0);
 
-  Widget buildBookList(bool isDarkMode) {
+  Widget _buildBooksList(bool isDarkMode) {
     final books = Get.find<BooksController>().books;
     return Stack(
       children: [
@@ -162,7 +162,7 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
-  Widget buildBookDetail() {
+  Widget _buildBookDetail() {
     String title = '';
     String eHentaiUrl = '';
     String? authors;
@@ -240,7 +240,7 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
-  List<Book> getSelectedBooks() {
+  List<Book> _getSelectedBooks() {
     if (_multiSelectedBookId.isEmpty) {
       return [];
     }
@@ -249,12 +249,12 @@ class _BooksPageState extends State<BooksPage> {
     return books.where((book) => ids.contains(book.id)).toList();
   }
 
-  Future<void> editSelectedBooks() async {
+  Future<void> _editSelectedBooks() async {
     await showDialog(
       context: context,
       builder: (context) {
         return EditDialog(
-          books: getSelectedBooks(),
+          books: _getSelectedBooks(),
         );
       },
     );
@@ -272,7 +272,7 @@ class _BooksPageState extends State<BooksPage> {
     setState(() {});
   }
 
-  Future<void> saveSelectedBooks() async {
+  Future<void> _saveSelectedBooks() async {
     setState(() {
       _saveButtonEnabled = false;
     });
@@ -305,7 +305,7 @@ class _BooksPageState extends State<BooksPage> {
       });
       return;
     }
-    final books = getSelectedBooks();
+    final books = _getSelectedBooks();
     try {
       final flag = await CalibreHandler.saveBooks(books);
       setState(() {
@@ -365,12 +365,12 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
-  Future<void> updateSelectedBooks() async {
+  Future<void> _updateSelectedBooks() async {
     final logs = Get.find<Logs>();
     setState(() {
       _updateButtonEnabled = false;
     });
-    final selectedBooks = getSelectedBooks();
+    final selectedBooks = _getSelectedBooks();
     final total = selectedBooks.length;
     final settings = Get.find<Settings>();
     late final EHentai eHentai;
@@ -501,7 +501,7 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
-  Future<void> deleteSelectedBooks() async {
+  Future<void> _deleteSelectedBooks() async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -527,7 +527,7 @@ class _BooksPageState extends State<BooksPage> {
     );
     if (shouldDelete != null && shouldDelete) {
       try {
-        final selectedBooks = getSelectedBooks();
+        final selectedBooks = _getSelectedBooks();
         final ids = await BookHandler.deleteBooks(selectedBooks);
         if (ids.isEmpty) {
           return;
@@ -568,7 +568,7 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
-  Future<void> addBooks() async {
+  Future<void> _addBooks() async {
     setState(() {
       _addButtonEnabled = false;
     });
@@ -634,7 +634,7 @@ class _BooksPageState extends State<BooksPage> {
     });
   }
 
-  PreferredSizeWidget buildAppBar() {
+  PreferredSizeWidget _buildAppBar() {
     final theme = Theme.of(context);
     final booksController = Get.find<BooksController>();
     final books = booksController.books;
@@ -700,7 +700,7 @@ class _BooksPageState extends State<BooksPage> {
           icon: const Icon(Icons.edit),
           tooltip: AppLocalizations.of(context)!.editBooks,
           onPressed: _multiSelectedBookId.isNotEmpty
-              ? () async => await editSelectedBooks()
+              ? () async => await _editSelectedBooks()
               : null,
         ),
         IconButton(
@@ -708,7 +708,7 @@ class _BooksPageState extends State<BooksPage> {
           icon: const Icon(Icons.find_in_page),
           tooltip: AppLocalizations.of(context)!.updateMetadata,
           onPressed: _updateButtonEnabled && _multiSelectedBookId.isNotEmpty
-              ? () async => await updateSelectedBooks()
+              ? () async => await _updateSelectedBooks()
               : null,
         ),
         IconButton(
@@ -716,7 +716,7 @@ class _BooksPageState extends State<BooksPage> {
           icon: const Icon(Icons.save_as),
           tooltip: AppLocalizations.of(context)!.saveToCalibre,
           onPressed: _saveButtonEnabled && _multiSelectedBookId.isNotEmpty
-              ? () async => await saveSelectedBooks()
+              ? () async => await _saveSelectedBooks()
               : null,
         ),
         IconButton(
@@ -724,7 +724,7 @@ class _BooksPageState extends State<BooksPage> {
           icon: const Icon(Icons.delete),
           tooltip: AppLocalizations.of(context)!.deleteBooks,
           onPressed: _multiSelectedBookId.isNotEmpty
-              ? () async => await deleteSelectedBooks()
+              ? () async => await _deleteSelectedBooks()
               : null,
         ),
         const SizedBox(width: 12),
@@ -732,7 +732,7 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
-  Widget buildStatusBar() {
+  Widget _buildStatusBar() {
     final booksController = Get.find<BooksController>();
     final length = booksController.length;
     return Padding(
@@ -766,13 +766,13 @@ class _BooksPageState extends State<BooksPage> {
     final theme = Theme.of(context);
     return AppPage(
       child: Scaffold(
-          appBar: buildAppBar(),
+          appBar: _buildAppBar(),
           body: Row(
             children: [
               Flexible(
                 flex: 12,
                 child: Obx(
-                  () => buildBookList(theme.brightness == Brightness.dark),
+                  () => _buildBooksList(theme.brightness == Brightness.dark),
                 ),
               ),
               const VerticalDivider(
@@ -783,17 +783,17 @@ class _BooksPageState extends State<BooksPage> {
               const SizedBox(width: 12),
               Flexible(
                 flex: 5,
-                child: buildBookDetail(),
+                child: _buildBookDetail(),
               ),
               const SizedBox(width: 12),
             ],
           ),
-          bottomNavigationBar: buildStatusBar(),
+          bottomNavigationBar: _buildStatusBar(),
           floatingActionButton: FloatingActionButton(
             backgroundColor: _addButtonEnabled
                 ? theme.colorScheme.primary
                 : theme.colorScheme.primary.withOpacity(0.2),
-            onPressed: _addButtonEnabled ? () async => await addBooks() : null,
+            onPressed: _addButtonEnabled ? () async => await _addBooks() : null,
             child: const Icon(Icons.add),
           )),
     );
