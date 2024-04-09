@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 
-class DialogInputItem extends StatefulWidget {
+class DialogInputItem extends StatelessWidget {
   final String name;
   final IconData icon;
   final RxString rxString;
@@ -19,12 +19,7 @@ class DialogInputItem extends StatefulWidget {
     this.hideText = false,
   });
 
-  @override
-  State<DialogInputItem> createState() => _DialogInputItemState();
-}
-
-class _DialogInputItemState extends State<DialogInputItem> {
-  Text buildText(bool hideText, String rxString) {
+  Text buildText(bool hideText, String rxString, BuildContext context) {
     return Text(
       hideText
           ? (rxString.isEmpty ? AppLocalizations.of(context)!.notSet : '******')
@@ -41,8 +36,8 @@ class _DialogInputItemState extends State<DialogInputItem> {
   @override
   Widget build(BuildContext context) {
     return SettingItem(
-      name: widget.name,
-      icon: widget.icon,
+      name: name,
+      icon: icon,
       widget: Obx(
         () => Material(
             color: Colors.transparent,
@@ -51,7 +46,7 @@ class _DialogInputItemState extends State<DialogInputItem> {
               child: InkWell(
                   onTap: () async {
                     final controller =
-                        TextEditingController(text: widget.rxString.value);
+                        TextEditingController(text: rxString.value);
                     final value = await showDialog<String>(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -81,11 +76,11 @@ class _DialogInputItemState extends State<DialogInputItem> {
                         ],
                       ),
                     );
-                    if (value != null && value != widget.rxString.value) {
-                      widget.updateValue(value);
+                    if (value != null && value != rxString.value) {
+                      updateValue(value);
                     }
                   },
-                  child: buildText(widget.hideText, widget.rxString.value)),
+                  child: buildText(hideText, rxString.value, context)),
             )),
       ),
     );

@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:eh_tagger/src/app/books.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
 import 'package:eh_tagger/src/database/dao/books.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:get/get.dart';
 import 'package:path/path.dart';
 
 class EditDialog extends StatefulWidget {
-  final List<Book> books;
-
-  const EditDialog({super.key, required this.books});
+  const EditDialog({super.key});
 
   @override
   State<EditDialog> createState() => _EditDialogState();
@@ -19,6 +19,7 @@ class EditDialog extends StatefulWidget {
 
 class _EditDialogState extends State<EditDialog> {
   int _index = 0;
+  final _books = <Book>[];
   final _formKey = GlobalKey<FormState>();
   late Book _currentBook;
   bool _isModified = false;
@@ -61,7 +62,9 @@ class _EditDialogState extends State<EditDialog> {
   @override
   void initState() {
     super.initState();
-    _currentBook = widget.books[_index];
+    final books = Get.find<BooksController>().books;
+    _books.addAll(books.where((book) => book.selected.value));
+    _currentBook = _books[_index];
     _updateControllers();
   }
 
@@ -96,7 +99,7 @@ class _EditDialogState extends State<EditDialog> {
   void _nextBook() {
     setState(() {
       _index++;
-      _currentBook = widget.books[_index];
+      _currentBook = _books[_index];
       _updateControllers();
       _isModified = false;
     });
@@ -105,7 +108,7 @@ class _EditDialogState extends State<EditDialog> {
   void _previousBook() {
     setState(() {
       _index--;
-      _currentBook = widget.books[_index];
+      _currentBook = _books[_index];
       _updateControllers();
       _isModified = false;
     });
@@ -140,13 +143,12 @@ class _EditDialogState extends State<EditDialog> {
                           icon: const Icon(Icons.arrow_back),
                           onPressed: _index > 0 ? _previousBook : null,
                         ),
-                        Text(' ${_index + 1}/${widget.books.length} ',
+                        Text(' ${_index + 1}/${_books.length} ',
                             style: Theme.of(context).textTheme.titleLarge),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward),
-                          onPressed: _index < widget.books.length - 1
-                              ? _nextBook
-                              : null,
+                          onPressed:
+                              _index < _books.length - 1 ? _nextBook : null,
                         ),
                       ],
                     )

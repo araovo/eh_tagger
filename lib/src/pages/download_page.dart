@@ -14,16 +14,35 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class DownloadPage extends StatefulWidget {
-  const DownloadPage({super.key});
+class DownloadPageController extends GetxController {
+  final buttonsLock = false.obs;
+  int selectedNum = 0;
+  final hasSelection = false.obs;
 
-  @override
-  State<DownloadPage> createState() => _DownloadPageState();
+  void lock() {
+    buttonsLock.value = true;
+  }
+
+  void unlock() {
+    buttonsLock.value = false;
+  }
+
+  void setHasSelection(bool value) {
+    hasSelection.value = value;
+  }
+
+  void clearSelection() {
+    final downloader = Get.find<Downloader>();
+    for (var task in downloader.tasks) {
+      task.selected.value = false;
+    }
+    selectedNum = 0;
+    hasSelection.value = false;
+  }
 }
 
-class _DownloadPageState extends State<DownloadPage> {
-  final _multiSelectedBookId = <int>{};
-  bool _buttonsLock = false;
+class DownloadPage extends StatelessWidget {
+  const DownloadPage({super.key});
 
   Widget _buildTaskList(bool isDarkMode) {
     Color getStatusColor(TaskStatus status) {
@@ -68,7 +87,6 @@ class _DownloadPageState extends State<DownloadPage> {
           separatorBuilder: (context, index) => const SizedBox(height: 4),
           itemBuilder: (context, index) {
             final task = tasks[index];
-            final id = task.id;
             final name = task.name;
             final status = task.status;
             final progress = task.progress;
@@ -104,17 +122,27 @@ class _DownloadPageState extends State<DownloadPage> {
                           padding: const EdgeInsets.all(8.0),
                           child: Row(
                             children: [
-                              Checkbox(
-                                value: _multiSelectedBookId.contains(id),
-                                onChanged: (value) {
-                                  setState(() {
+                              Obx(
+                                () => Checkbox(
+                                  value: task.selected.value,
+                                  onChanged: (value) {
+                                    final controller =
+                                        Get.find<DownloadPageController>();
                                     if (value!) {
-                                      _multiSelectedBookId.add(id);
+                                      task.selected.value = true;
+                                      controller.setHasSelection(true);
+                                      controller.selectedNum++;
                                     } else {
-                                      _multiSelectedBookId.remove(id);
+                                      task.selected.value = false;
+                                      if (controller.selectedNum > 0) {
+                                        controller.selectedNum--;
+                                      }
+                                      if (controller.selectedNum == 0) {
+                                        controller.setHasSelection(false);
+                                      }
                                     }
-                                  });
-                                },
+                                  },
+                                ),
                               ),
                               Expanded(
                                 child: Text(
@@ -153,8 +181,16 @@ class _DownloadPageState extends State<DownloadPage> {
     );
   }
 
-  Future<void> _addTasks(
-      {required bool retry, List<String>? failedUrls}) async {
+  List<DownloadTask> _getSelectedTasks(Downloader downloader) {
+    final tasks = downloader.tasks.where((task) => task.selected.value);
+    return tasks.toList();
+  }
+
+  Future<void> _addTasks({
+    required bool retry,
+    List<String>? failedUrls,
+    required BuildContext context,
+  }) async {
     final downloader = Get.find<Downloader>();
     Future<void> addAndStart(List<String> urls) async {
       final logs = Get.find<Logs>();
@@ -163,7 +199,7 @@ class _DownloadPageState extends State<DownloadPage> {
         if (value.isEmpty) {
           return;
         }
-        await _startTasks(value);
+        await _startTasks(tasks: value);
       });
     }
 
@@ -186,7 +222,7 @@ class _DownloadPageState extends State<DownloadPage> {
     final curFailedUrls = downloader.failedUrls;
     final diffFailedUrls = curFailedUrls.difference(preFailedUrls).toList();
     if (diffFailedUrls.isNotEmpty) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       final retryConfirm = await showDialog<bool>(
         context: context,
         builder: (context) {
@@ -213,7 +249,12 @@ class _DownloadPageState extends State<DownloadPage> {
       );
       if (retryConfirm == null || !retryConfirm) return;
       downloader.failedUrls.removeAll(diffFailedUrls);
-      await _addTasks(retry: true, failedUrls: diffFailedUrls);
+      if (!context.mounted) return;
+      await _addTasks(
+        retry: true,
+        failedUrls: diffFailedUrls,
+        context: context,
+      );
     }
   }
 
@@ -233,85 +274,75 @@ class _DownloadPageState extends State<DownloadPage> {
     }
   }
 
-  Future<void> _startTasks(Iterable<int> ids) async {
-    setState(() {
-      _buttonsLock = true;
-    });
+  Future<void> _startTasks({List<DownloadTask>? tasks}) async {
+    final controller = Get.find<DownloadPageController>();
+    controller.lock();
     final downloader = Get.find<Downloader>();
     if (downloader.tasks.isEmpty) {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
       return;
     }
+    late final List<DownloadTask> tasksToStart;
+    if (tasks != null) {
+      tasksToStart = tasks;
+    } else {
+      tasks = _getSelectedTasks(downloader);
+    }
     try {
-      Future.microtask(() => downloader.startTasks(ids));
+      Future.microtask(() => downloader.startTasks(tasksToStart));
     } catch (e) {
       final logs = Get.find<Logs>();
       logs.error('Failed to start tasks: $e');
     } finally {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
     }
   }
 
   Future<void> _pauseTasks() async {
-    setState(() {
-      _buttonsLock = true;
-    });
+    final controller = Get.find<DownloadPageController>();
+    controller.lock();
     final downloader = Get.find<Downloader>();
     if (downloader.tasks.isEmpty) {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
       return;
     }
     try {
-      Future.microtask(() => downloader.pauseTasks(_multiSelectedBookId));
+      final tasks = _getSelectedTasks(downloader);
+      Future.microtask(() => downloader.pauseTasks(tasks));
     } catch (e) {
       final logs = Get.find<Logs>();
       logs.error('Failed to pause tasks: $e');
     } finally {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
     }
   }
 
   Future<void> _cancelTasks() async {
-    setState(() {
-      _buttonsLock = true;
-    });
+    final controller = Get.find<DownloadPageController>();
+    controller.lock();
     final downloader = Get.find<Downloader>();
     if (downloader.tasks.isEmpty) {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
       return;
     }
     try {
-      await downloader.cancelTasks(_multiSelectedBookId);
+      final tasks = _getSelectedTasks(downloader);
+      await downloader.cancelTasks(tasks);
     } catch (e) {
       final logs = Get.find<Logs>();
       logs.error('Failed to cancel tasks: $e');
     } finally {
-      setState(() {
-        _multiSelectedBookId.clear();
-        _buttonsLock = false;
-      });
+      controller.unlock();
+      controller.clearSelection();
     }
   }
 
-  Future<void> _deleteTasks() async {
-    setState(() {
-      _buttonsLock = true;
-    });
+  Future<void> _deleteTasks(BuildContext context) async {
+    final controller = Get.find<DownloadPageController>();
+    controller.lock();
     final downloader = Get.find<Downloader>();
     if (downloader.tasks.isEmpty) {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
       return;
     }
     final shouldDelete = await showDialog<bool>(
@@ -332,27 +363,25 @@ class _DownloadPageState extends State<DownloadPage> {
       ),
     );
     if (shouldDelete != true) {
-      setState(() {
-        _buttonsLock = false;
-      });
+      controller.unlock();
       return;
     }
     try {
-      await downloader.deleteTasks(_multiSelectedBookId);
+      final tasks = _getSelectedTasks(downloader);
+      await downloader.deleteTasks(tasks);
     } catch (e) {
       final logs = Get.find<Logs>();
       logs.error('Failed to delete tasks: $e');
     } finally {
-      setState(() {
-        _multiSelectedBookId.clear();
-        _buttonsLock = false;
-      });
+      controller.unlock();
+      controller.clearSelection();
     }
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     final theme = Theme.of(context);
     final settings = Get.find<Settings>();
+    final controller = Get.find<DownloadPageController>();
     return AppBar(
       title: Text(AppLocalizations.of(context)!.download),
       actions: [
@@ -361,7 +390,7 @@ class _DownloadPageState extends State<DownloadPage> {
           icon: const Icon(Icons.add),
           tooltip: AppLocalizations.of(context)!.addTasks,
           onPressed: settings.dbInitialized
-              ? () async => await _addTasks(retry: false)
+              ? () async => await _addTasks(retry: false, context: context)
               : null,
         ),
         IconButton(
@@ -370,37 +399,49 @@ class _DownloadPageState extends State<DownloadPage> {
           tooltip: AppLocalizations.of(context)!.openDownloadDir,
           onPressed: () async => await _openDownloadDir(),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.play_arrow),
-          tooltip: AppLocalizations.of(context)!.startTasks,
-          onPressed: _multiSelectedBookId.isNotEmpty && !_buttonsLock
-              ? () async => await _startTasks(_multiSelectedBookId)
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.play_arrow),
+            tooltip: AppLocalizations.of(context)!.startTasks,
+            onPressed:
+                controller.hasSelection.value && !controller.buttonsLock.value
+                    ? () async => await _startTasks()
+                    : null,
+          ),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.pause),
-          tooltip: AppLocalizations.of(context)!.pauseTasks,
-          onPressed: _multiSelectedBookId.isNotEmpty && !_buttonsLock
-              ? () async => await _pauseTasks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.pause),
+            tooltip: AppLocalizations.of(context)!.pauseTasks,
+            onPressed:
+                controller.hasSelection.value && !controller.buttonsLock.value
+                    ? () async => await _pauseTasks()
+                    : null,
+          ),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.cancel),
-          tooltip: AppLocalizations.of(context)!.cancelTasks,
-          onPressed: _multiSelectedBookId.isNotEmpty && !_buttonsLock
-              ? () async => await _cancelTasks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.cancel),
+            tooltip: AppLocalizations.of(context)!.cancelTasks,
+            onPressed:
+                controller.hasSelection.value && !controller.buttonsLock.value
+                    ? () async => await _cancelTasks()
+                    : null,
+          ),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.delete),
-          tooltip: AppLocalizations.of(context)!.deleteTasks,
-          onPressed: _multiSelectedBookId.isNotEmpty && !_buttonsLock
-              ? () async => await _deleteTasks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.delete),
+            tooltip: AppLocalizations.of(context)!.deleteTasks,
+            onPressed:
+                controller.hasSelection.value && !controller.buttonsLock.value
+                    ? () async => await _deleteTasks(context)
+                    : null,
+          ),
         ),
         const SizedBox(width: 12),
       ],
@@ -410,9 +451,10 @@ class _DownloadPageState extends State<DownloadPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    Get.put(DownloadPageController());
     return AppPage(
       child: Scaffold(
-        appBar: _buildAppBar(),
+        appBar: _buildAppBar(context),
         body: _buildTaskList(theme.brightness == Brightness.dark),
       ),
     );

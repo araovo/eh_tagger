@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 
-class DbItem extends StatefulWidget {
+class DbItem extends StatelessWidget {
   final String name;
   final IconData icon;
 
@@ -16,12 +16,7 @@ class DbItem extends StatefulWidget {
     required this.icon,
   });
 
-  @override
-  State<DbItem> createState() => _DbItemState();
-}
-
-class _DbItemState extends State<DbItem> {
-  Text buildText(String rxString) {
+  Text buildText(String rxString, BuildContext context) {
     return Text(
       rxString.isEmpty ? AppLocalizations.of(context)!.notDetected : rxString,
       style: Theme.of(context)
@@ -36,8 +31,8 @@ class _DbItemState extends State<DbItem> {
     final settings = Get.find<Settings>();
     final transDbVersion = settings.transDbVersion;
     return SettingItem(
-      name: widget.name,
-      icon: widget.icon,
+      name: name,
+      icon: icon,
       widget: Obx(
         () => Material(
             color: Colors.transparent,
@@ -160,7 +155,7 @@ class _DbItemState extends State<DbItem> {
                       }
                     }
                   },
-                  child: buildText(transDbVersion.value)),
+                  child: buildText(transDbVersion.value, context)),
             )),
       ),
     );

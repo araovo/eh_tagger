@@ -33,9 +33,9 @@ extension TaskHandler on Downloader {
     return archives;
   }
 
-  Future<List<int>> addtasks(List<String> urls) async {
+  Future<List<DownloadTask>> addtasks(List<String> urls) async {
     final archives = await _getArchives(urls);
-    final ids = <int>[];
+    final tasksToAdd = <DownloadTask>[];
     for (final archive in archives) {
       final newTask = DownloadTask.newTask(
         name: archive.name,
@@ -47,17 +47,15 @@ extension TaskHandler on Downloader {
       final id = await taskDao.insertTask(newTask);
       newTask.id = id;
       tasks.insert(0, newTask);
-      ids.add(id);
+      tasksToAdd.insert(0, newTask);
     }
-    return ids;
+    return tasksToAdd;
   }
 
-  Future<void> startTasks(Iterable<int> ids) async {
-    final indexes =
-        ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
+  Future<void> startTasks(List<DownloadTask> tasks) async {
     final futures = <Future>[];
-    for (final index in indexes) {
-      futures.add(_startTask(tasks[index]));
+    for (final task in tasks) {
+      futures.add(_startTask(task));
     }
     await Future.wait(futures);
   }
@@ -163,11 +161,9 @@ extension TaskHandler on Downloader {
     _updateTaskSpeed(task: task, speed: '');
   }
 
-  Future<void> pauseTasks(Iterable<int> ids) async {
-    final indexes =
-        ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
-    for (final index in indexes) {
-      await _pauseTask(tasks[index]);
+  Future<void> pauseTasks(List<DownloadTask> tasks) async {
+    for (final task in tasks) {
+      await _pauseTask(task);
     }
   }
 
@@ -189,11 +185,9 @@ extension TaskHandler on Downloader {
     }
   }
 
-  Future<void> cancelTasks(Iterable<int> ids) async {
-    final indexes =
-        ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
-    for (final index in indexes) {
-      await _cancelTask(tasks[index]);
+  Future<void> cancelTasks(List<DownloadTask> tasks) async {
+    for (final task in tasks) {
+      await _cancelTask(task);
     }
   }
 
@@ -219,11 +213,9 @@ extension TaskHandler on Downloader {
     }
   }
 
-  Future<void> deleteTasks(Iterable<int> ids) async {
-    final indexes =
-        ids.map((id) => tasks.indexWhere((task) => task.id == id)).toList();
-    for (final index in indexes) {
-      await _deleteTask(tasks[index]);
+  Future<void> deleteTasks(List<DownloadTask> tasks) async {
+    for (final task in tasks) {
+      await _deleteTask(task);
     }
   }
 
@@ -300,7 +292,7 @@ extension TaskHandler on Downloader {
                 title: book.metadata.title,
                 authors: book.metadata.authors,
                 identifiers: book.metadata.identifiers,
-                ehentaiUrl: book.metadata.eHentaiUrl,
+                eHentaiUrl: book.metadata.eHentaiUrl,
                 id: book.id,
               );
             } else {

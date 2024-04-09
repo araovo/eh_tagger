@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 class DownloadTask {
   int id;
+  final selected = false.obs;
   String name;
   String path;
   int size;

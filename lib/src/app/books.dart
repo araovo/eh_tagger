@@ -9,8 +9,6 @@ class BooksController extends GetxController {
 
   Book getBook(int index) => _books[index];
 
-  int get length => _books.length;
-
   int getIndex(int bookId) => _books.indexWhere((book) => book.id == bookId);
 
   Future<void> queryBooks() async {
@@ -31,5 +29,9 @@ class BooksController extends GetxController {
 
   void removeBooks(List<int> ids) {
     _books.removeWhere((book) => ids.contains(book.id));
+  }
+
+  void refreshBooks() {
+    _books.refresh();
   }
 }

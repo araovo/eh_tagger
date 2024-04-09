@@ -15,20 +15,71 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:get/get.dart';
 
-class BooksPage extends StatefulWidget {
-  const BooksPage({super.key});
+class BooksPageController extends GetxController {
+  final addButtonLock = false.obs;
+  final updateButtonLock = false.obs;
+  final saveButtonLock = false.obs;
+  final selectedNum = 0.obs;
+  final hasSelection = false.obs;
+  final coverBytes = Uint8List(0).obs;
+  final tappedBookId = Rx<int?>(null);
 
-  @override
-  State<BooksPage> createState() => _BooksPageState();
+  void lockAddButton() {
+    addButtonLock.value = true;
+  }
+
+  void unlockAddButton() {
+    addButtonLock.value = false;
+  }
+
+  void lockUpdateButton() {
+    updateButtonLock.value = true;
+  }
+
+  void unlockUpdateButton() {
+    updateButtonLock.value = false;
+  }
+
+  void lockSaveButton() {
+    saveButtonLock.value = true;
+  }
+
+  void unlockSaveButton() {
+    saveButtonLock.value = false;
+  }
+
+  void setSelectedNum(int value) {
+    if (value < 0) {
+      selectedNum.value = 0;
+    } else {
+      selectedNum.value = value;
+    }
+  }
+
+  void setHasSelection(bool value) {
+    hasSelection.value = value;
+  }
+
+  void clearSelection() {
+    final books = Get.find<BooksController>().books;
+    for (var book in books) {
+      book.selected.value = false;
+    }
+    selectedNum.value = 0;
+    hasSelection.value = false;
+  }
+
+  void setCoverBytes(Uint8List bytes) {
+    coverBytes.value = bytes;
+  }
+
+  void setTappedBookId(int? id) {
+    tappedBookId.value = id;
+  }
 }
 
-class _BooksPageState extends State<BooksPage> {
-  bool _addButtonEnabled = true;
-  bool _updateButtonEnabled = true;
-  bool _saveButtonEnabled = true;
-  int? _selectedBookId;
-  final _multiSelectedBookId = <int>{};
-  var _coverBytes = Uint8List(0);
+class BooksPage extends StatelessWidget {
+  const BooksPage({super.key});
 
   Widget _buildBooksList(bool isDarkMode) {
     final books = Get.find<BooksController>().books;
@@ -39,7 +90,6 @@ class _BooksPageState extends State<BooksPage> {
           child: ListView.separated(
             itemCount: books.length,
             itemBuilder: (context, index) {
-              final bookId = books[index].id;
               final title = books[index].metadata.title;
               final authors = books[index].metadata.authors?.join(', ');
               final publisher = books[index].metadata.publisher;
@@ -68,85 +118,107 @@ class _BooksPageState extends State<BooksPage> {
               }
               return ClipRRect(
                   borderRadius: BorderRadius.circular(6.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.grey,
-                        width: 0,
+                  child: Obx(() {
+                    final tapped = books[index].tapped.value;
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.grey,
+                          width: 0,
+                        ),
+                        borderRadius: BorderRadius.circular(6.0),
+                        color: tapped
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.2)
+                            : isDarkMode
+                                ? Colors.grey[850]!
+                                : Colors.grey[350]!,
                       ),
-                      borderRadius: BorderRadius.circular(6.0),
-                      color:
-                          _selectedBookId != null && bookId == _selectedBookId
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.2)
-                              : isDarkMode
-                                  ? Colors.grey[850]!
-                                  : Colors.grey[350]!,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      clipBehavior: Clip.hardEdge,
-                      child: InkWell(
-                        onTap: () async {
-                          if (_selectedBookId != null &&
-                              bookId == _selectedBookId) {
-                            _selectedBookId = null;
-                            _coverBytes = Uint8List(0);
-                          } else {
-                            _selectedBookId = bookId;
-                            final cover = File(books[index].coverPath);
-                            if (await cover.exists()) {
-                              _coverBytes = await cover.readAsBytes();
+                      child: Material(
+                        color: Colors.transparent,
+                        clipBehavior: Clip.hardEdge,
+                        child: InkWell(
+                          onTap: () {
+                            final controller = Get.find<BooksPageController>();
+                            if (tapped) {
+                              books[index].tapped.value = false;
+                              controller.setTappedBookId(null);
+                              controller.setCoverBytes(Uint8List(0));
                             } else {
-                              _coverBytes = Uint8List(0);
+                              final lastTappedId =
+                                  controller.tappedBookId.value;
+                              final lastTappedIndex = books.indexWhere(
+                                  (book) => book.id == lastTappedId);
+                              if (lastTappedIndex != -1) {
+                                books[lastTappedIndex].tapped.value = false;
+                              }
+                              books[index].tapped.value = true;
+                              controller.setTappedBookId(books[index].id);
+                              final cover = File(books[index].coverPath);
+                              if (cover.existsSync()) {
+                                controller
+                                    .setCoverBytes(cover.readAsBytesSync());
+                              } else {
+                                controller.setCoverBytes(Uint8List(0));
+                              }
                             }
-                          }
-                          setState(() {});
-                        },
-                        child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Row(children: [
-                              Checkbox(
-                                value: _multiSelectedBookId.contains(bookId),
-                                onChanged: (value) {
-                                  setState(() {
-                                    if (value!) {
-                                      _multiSelectedBookId.add(bookId);
-                                    } else {
-                                      _multiSelectedBookId.remove(bookId);
-                                    }
-                                  });
-                                },
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                    if (content.isNotEmpty)
+                          },
+                          child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(children: [
+                                Obx(
+                                  () => Checkbox(
+                                    value: books[index].selected.value,
+                                    onChanged: (value) {
+                                      final controller =
+                                          Get.find<BooksPageController>();
+                                      if (value!) {
+                                        books[index].selected.value = true;
+                                        controller.setSelectedNum(
+                                            controller.selectedNum.value + 1);
+                                        controller.setHasSelection(true);
+                                      } else {
+                                        books[index].selected.value = false;
+                                        controller.setSelectedNum(
+                                            controller.selectedNum.value - 1);
+                                        controller.setHasSelection(
+                                            controller.selectedNum.value != 0);
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
                                       Text(
-                                        content,
-                                        maxLines: 2,
+                                        title,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodySmall,
+                                            .bodyLarge,
                                       ),
-                                  ],
+                                      if (content.isNotEmpty)
+                                        Text(
+                                          content,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ])),
+                              ])),
+                        ),
                       ),
-                    ),
-                  ));
+                    );
+                  }));
             },
             separatorBuilder: (context, index) {
               return const SizedBox(height: 4);
@@ -162,7 +234,7 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
-  Widget _buildBookDetail() {
+  Widget _buildBookDetail(BuildContext context) {
     String title = '';
     String eHentaiUrl = '';
     String? authors;
@@ -171,111 +243,118 @@ class _BooksPageState extends State<BooksPage> {
     String? languages;
     double? rating;
 
-    final booksController = Get.find<BooksController>();
-    if (_selectedBookId != null) {
-      final index = booksController.getIndex(_selectedBookId!);
-      final book = booksController.getBook(index);
-      title = book.metadata.title;
-      eHentaiUrl = book.metadata.eHentaiUrl;
-      authors = book.metadata.authors?.join(',');
-      publisher = book.metadata.publisher;
-      tags = book.metadata.tags?.join(', ');
-      languages = book.metadata.languages?.join(', ');
-      rating = book.metadata.rating;
-    }
     return Align(
       alignment: Alignment.topCenter,
       child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 12),
-            if (_selectedBookId != null) ...[
-              _coverBytes.isEmpty
-                  ? const SizedBox.shrink()
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [Image.memory(_coverBytes), const Divider()],
+        child: GetX(
+          builder: (BooksPageController controller) {
+            final tappedBookId = controller.tappedBookId.value;
+            if (tappedBookId != null) {
+              final booksController = Get.find<BooksController>();
+              final index = booksController.getIndex(tappedBookId);
+              final book = booksController.getBook(index);
+              title = book.metadata.title;
+              eHentaiUrl = book.metadata.eHentaiUrl;
+              authors = book.metadata.authors?.join(',');
+              publisher = book.metadata.publisher;
+              tags = book.metadata.tags?.join(', ');
+              languages = book.metadata.languages?.join(', ');
+              rating = book.metadata.rating;
+            }
+            final coverBytes = controller.coverBytes.value;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                if (tappedBookId != null) ...[
+                  coverBytes.isEmpty
+                      ? const SizedBox.shrink()
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [Image.memory(coverBytes), const Divider()],
+                        ),
+                  if (title.isNotEmpty)
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall,
+                      overflow: TextOverflow.ellipsis,
                     ),
-              if (title.isNotEmpty)
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              if (eHentaiUrl.isNotEmpty)
-                Text(
-                  eHentaiUrl,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              if (authors != null && authors.isNotEmpty)
-                Text(
-                  '${AppLocalizations.of(context)!.authors}: $authors',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              if (publisher != null && publisher.isNotEmpty)
-                Text(
-                  '${AppLocalizations.of(context)!.publisher}: $publisher',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              if (tags != null && tags.isNotEmpty)
-                Text(
-                  '${AppLocalizations.of(context)!.tags}: $tags',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              if (languages != null && languages.isNotEmpty)
-                Text(
-                  '${AppLocalizations.of(context)!.languages}: $languages',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              if (rating != null)
-                Text(
-                  '${AppLocalizations.of(context)!.rating}: $rating',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-            ],
-          ],
+                  if (eHentaiUrl.isNotEmpty)
+                    Text(
+                      eHentaiUrl,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  if (authors != null && authors!.isNotEmpty)
+                    Text(
+                      '${AppLocalizations.of(context)!.authors}: $authors',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  if (publisher != null && publisher!.isNotEmpty)
+                    Text(
+                      '${AppLocalizations.of(context)!.publisher}: $publisher',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  if (tags != null && tags!.isNotEmpty)
+                    Text(
+                      '${AppLocalizations.of(context)!.tags}: $tags',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  if (languages != null && languages!.isNotEmpty)
+                    Text(
+                      '${AppLocalizations.of(context)!.languages}: $languages',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                  if (rating != null)
+                    Text(
+                      '${AppLocalizations.of(context)!.rating}: $rating',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
   List<Book> _getSelectedBooks() {
-    if (_multiSelectedBookId.isEmpty) {
-      return [];
-    }
-    final ids = _multiSelectedBookId.toList()..sort();
     final books = Get.find<BooksController>().books;
-    return books.where((book) => ids.contains(book.id)).toList();
+    final selectedBooks = <Book>[];
+    for (final book in books) {
+      if (book.selected.value) {
+        selectedBooks.add(book);
+      }
+    }
+    return selectedBooks;
   }
 
-  Future<void> _editSelectedBooks() async {
+  Future<void> _editSelectedBooks(BuildContext context) async {
     await showDialog(
       context: context,
       builder: (context) {
-        return EditDialog(
-          books: _getSelectedBooks(),
-        );
+        return const EditDialog();
       },
     );
-    if (_selectedBookId != null) {
-      final booksController = Get.find<BooksController>();
-      final index = booksController.getIndex(_selectedBookId!);
+    final booksController = Get.find<BooksController>();
+    booksController.refreshBooks();
+    final controller = Get.find<BooksPageController>();
+    final tapppedBookId = controller.tappedBookId.value;
+    if (tapppedBookId != null) {
+      final index = booksController.getIndex(tapppedBookId);
       final book = Get.find<BooksController>().getBook(index);
       final cover = File(book.coverPath);
       if (await cover.exists()) {
-        _coverBytes = await cover.readAsBytes();
+        controller.setCoverBytes(await cover.readAsBytes());
       } else {
-        _coverBytes = Uint8List(0);
+        controller.setCoverBytes(Uint8List(0));
       }
     }
-    setState(() {});
   }
 
-  Future<void> _saveSelectedBooks() async {
-    setState(() {
-      _saveButtonEnabled = false;
-    });
+  Future<void> _saveSelectedBooks(BuildContext context) async {
+    final controller = Get.find<BooksPageController>();
+    controller.lockSaveButton();
     final saveConfirm = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -300,18 +379,14 @@ class _BooksPageState extends State<BooksPage> {
       },
     );
     if (saveConfirm == null || !saveConfirm) {
-      setState(() {
-        _saveButtonEnabled = true;
-      });
+      controller.unlockSaveButton();
       return;
     }
     final books = _getSelectedBooks();
     try {
       final flag = await CalibreHandler.saveBooks(books);
-      setState(() {
-        _saveButtonEnabled = true;
-      });
-      if (!mounted) return;
+      controller.unlockSaveButton();
+      if (!context.mounted) return;
       String content;
       if (flag) {
         content =
@@ -340,7 +415,7 @@ class _BooksPageState extends State<BooksPage> {
     } catch (e) {
       final logs = Get.find<Logs>();
       logs.error('Failed to save books to Calibre: $e');
-      if (!mounted) return;
+      if (!context.mounted) return;
       await showDialog(
         context: context,
         builder: (context) {
@@ -358,18 +433,15 @@ class _BooksPageState extends State<BooksPage> {
           );
         },
       );
-      setState(() {
-        _saveButtonEnabled = true;
-      });
+      controller.unlockSaveButton();
       return;
     }
   }
 
-  Future<void> _updateSelectedBooks() async {
+  Future<void> _updateSelectedBooks(BuildContext context) async {
+    final controller = Get.find<BooksPageController>();
+    controller.lockUpdateButton();
     final logs = Get.find<Logs>();
-    setState(() {
-      _updateButtonEnabled = false;
-    });
     final selectedBooks = _getSelectedBooks();
     final total = selectedBooks.length;
     final settings = Get.find<Settings>();
@@ -378,7 +450,6 @@ class _BooksPageState extends State<BooksPage> {
       eHentai = EHentai(settings: settings);
     } catch (e) {
       logs.error('Failed to create EHentai: $e');
-      if (!mounted) return;
       await showDialog(
         context: context,
         builder: (context) {
@@ -396,9 +467,7 @@ class _BooksPageState extends State<BooksPage> {
           );
         },
       );
-      setState(() {
-        _updateButtonEnabled = true;
-      });
+      controller.unlockUpdateButton();
       return;
     }
 
@@ -424,7 +493,7 @@ class _BooksPageState extends State<BooksPage> {
               title: book.metadata.title,
               authors: book.metadata.authors,
               identifiers: book.metadata.identifiers,
-              ehentaiUrl: book.metadata.eHentaiUrl,
+              eHentaiUrl: book.metadata.eHentaiUrl,
               id: book.id,
             );
           } else {
@@ -450,26 +519,29 @@ class _BooksPageState extends State<BooksPage> {
     await eHentai.translateMetadata();
     await eHentai.closeTransDb(logs);
     if (eHentai.metadataMap.isEmpty) {
-      setState(() {
-        _updateButtonEnabled = true;
-      });
+      controller.unlockUpdateButton();
       return;
     }
     await BookHandler.updateMetadata(eHentai.metadataMap);
 
-    setState(() {
-      for (final book in selectedBooks) {
-        if (eHentai.metadataMap.containsKey(book.id)) {
-          book.metadata = eHentai.metadataMap[book.id]!;
-          if (settings.saveOpf.value) {
-            OpfHandler.saveOpf(book);
-          }
-          _multiSelectedBookId.remove(book.id);
+    int succeeded = 0;
+    for (final book in selectedBooks) {
+      if (eHentai.metadataMap.containsKey(book.id)) {
+        succeeded++;
+        book.metadata = eHentai.metadataMap[book.id]!;
+        if (settings.saveOpf.value) {
+          OpfHandler.saveOpf(book);
         }
+        book.selected.value = false;
       }
-      _updateButtonEnabled = true;
-    });
-    if (mounted) {
+    }
+    final booksController = Get.find<BooksController>();
+    booksController.refreshBooks();
+    controller.unlockUpdateButton();
+    controller.setSelectedNum(selectedBooks.length - succeeded);
+    controller.setHasSelection(controller.selectedNum.value != 0);
+
+    if (context.mounted) {
       String title = AppLocalizations.of(context)!.updateMetadata;
       String content = AppLocalizations.of(context)!.updateMetadataSuccess(
         eHentai.metadataMap.length,
@@ -501,7 +573,7 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
-  Future<void> _deleteSelectedBooks() async {
+  Future<void> _deleteSelectedBooks(BuildContext context) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -526,26 +598,24 @@ class _BooksPageState extends State<BooksPage> {
       },
     );
     if (shouldDelete != null && shouldDelete) {
+      final controller = Get.find<BooksPageController>();
       try {
         final selectedBooks = _getSelectedBooks();
         final ids = await BookHandler.deleteBooks(selectedBooks);
         if (ids.isEmpty) {
           return;
         }
-        if (_selectedBookId != null && ids.contains(_selectedBookId)) {
-          setState(() {
-            _selectedBookId = null;
-          });
+        final tapppedBookId = controller.tappedBookId.value;
+        if (tapppedBookId != null && ids.contains(tapppedBookId)) {
+          controller.setTappedBookId(null);
         }
-        setState(() {
-          final booksController = Get.find<BooksController>();
-          booksController.removeBooks(ids);
-          _multiSelectedBookId.clear();
-        });
+        final booksController = Get.find<BooksController>();
+        booksController.removeBooks(ids);
+        controller.clearSelection();
       } catch (e) {
         final logs = Get.find<Logs>();
         logs.error('Failed to delete books: $e');
-        if (!mounted) return;
+        if (!context.mounted) return;
         await showDialog(
           context: context,
           builder: (context) {
@@ -568,23 +638,18 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
-  Future<void> _addBooks() async {
-    setState(() {
-      _addButtonEnabled = false;
-    });
+  Future<void> _addBooks(BuildContext context) async {
+    final controller = Get.find<BooksPageController>();
+    controller.lockAddButton();
     try {
       final addedBooks = await BookHandler.addBooks(context: context);
       if (addedBooks.isEmpty) {
-        setState(() {
-          _addButtonEnabled = true;
-        });
+        controller.unlockAddButton();
         return;
       }
-      setState(() {
-        final booksController = Get.find<BooksController>();
-        booksController.addBooks(addedBooks.reversed);
-      });
-      if (!mounted) return;
+      final booksController = Get.find<BooksController>();
+      booksController.addBooks(addedBooks.reversed);
+      if (!context.mounted) return;
       await showDialog(
         context: context,
         builder: (context) {
@@ -606,10 +671,8 @@ class _BooksPageState extends State<BooksPage> {
     } catch (e) {
       final logs = Get.find<Logs>();
       logs.error('Failed to add books: $e');
-      setState(() {
-        _addButtonEnabled = true;
-      });
-      if (!mounted) return;
+      controller.unlockAddButton();
+      if (!context.mounted) return;
       await showDialog(
         context: context,
         builder: (context) {
@@ -629,15 +692,14 @@ class _BooksPageState extends State<BooksPage> {
       );
       return;
     }
-    setState(() {
-      _addButtonEnabled = true;
-    });
+    controller.unlockAddButton();
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     final theme = Theme.of(context);
     final booksController = Get.find<BooksController>();
     final books = booksController.books;
+    final controller = Get.find<BooksPageController>();
     return AppBar(
       title: Text(AppLocalizations.of(context)!.books),
       actions: [
@@ -646,17 +708,16 @@ class _BooksPageState extends State<BooksPage> {
           icon: const Icon(Icons.select_all),
           tooltip: AppLocalizations.of(context)!.selectAll,
           onPressed: () {
-            setState(() {
-              if (_multiSelectedBookId.length == booksController.length) {
-                _multiSelectedBookId.clear();
-              } else {
-                _multiSelectedBookId.clear();
-                // add all book id to _multiSelectedBookId
-                for (final book in books) {
-                  _multiSelectedBookId.add(book.id);
-                }
+            final hasBookSelected = books.any((book) => book.selected.value);
+            if (hasBookSelected) {
+              controller.clearSelection();
+            } else {
+              for (final book in books) {
+                book.selected.value = true;
               }
-            });
+              controller.setSelectedNum(books.length);
+              controller.setHasSelection(true);
+            }
           },
         ),
         IconButton(
@@ -664,77 +725,78 @@ class _BooksPageState extends State<BooksPage> {
           icon: const Icon(Icons.linear_scale),
           tooltip: AppLocalizations.of(context)!.selectRange,
           onPressed: () {
-            if (_multiSelectedBookId.isEmpty) return;
-            if (_multiSelectedBookId.length == 2) {
-              // start and end
-              int start = booksController.getIndex(_multiSelectedBookId.first);
-              int end = booksController.getIndex(_multiSelectedBookId.last);
-              if (start > end) {
-                // swap
-                final temp = start;
-                start = end;
-                end = temp;
+            if (controller.selectedNum.value == 0) return;
+            if (controller.selectedNum.value == 2) {
+              final selectedBooks = _getSelectedBooks();
+              final first = selectedBooks.first;
+              final last = selectedBooks.last;
+              final firstIndex = books.indexWhere((book) => book == first);
+              final lastIndex = books.indexWhere((book) => book == last);
+              int selectedNum = 0;
+              for (var i = 0; i < books.length; i++) {
+                if (i >= firstIndex && i <= lastIndex) {
+                  books[i].selected.value = true;
+                  selectedNum++;
+                } else {
+                  books[i].selected.value = false;
+                }
               }
-              if (end - start == 1) {
-                setState(() {
-                  _multiSelectedBookId.clear();
-                });
-              } else {
-                setState(() {
-                  _multiSelectedBookId.clear();
-                  // set range
-                  for (var i = start; i <= end; i++) {
-                    _multiSelectedBookId.add(books[i].id);
-                  }
-                });
-              }
+              controller.setSelectedNum(selectedNum);
+              controller.setHasSelection(true);
             } else {
-              setState(() {
-                _multiSelectedBookId.clear();
-              });
+              controller.clearSelection();
             }
           },
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.edit),
-          tooltip: AppLocalizations.of(context)!.editBooks,
-          onPressed: _multiSelectedBookId.isNotEmpty
-              ? () async => await _editSelectedBooks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.edit),
+            tooltip: AppLocalizations.of(context)!.editBooks,
+            onPressed: controller.hasSelection.value
+                ? () async => await _editSelectedBooks(context)
+                : null,
+          ),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.find_in_page),
-          tooltip: AppLocalizations.of(context)!.updateMetadata,
-          onPressed: _updateButtonEnabled && _multiSelectedBookId.isNotEmpty
-              ? () async => await _updateSelectedBooks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.find_in_page),
+            tooltip: AppLocalizations.of(context)!.updateMetadata,
+            onPressed: controller.hasSelection.value &&
+                    !controller.updateButtonLock.value
+                ? () async => await _updateSelectedBooks(context)
+                : null,
+          ),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.save_as),
-          tooltip: AppLocalizations.of(context)!.saveToCalibre,
-          onPressed: _saveButtonEnabled && _multiSelectedBookId.isNotEmpty
-              ? () async => await _saveSelectedBooks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.save_as),
+            tooltip: AppLocalizations.of(context)!.saveToCalibre,
+            onPressed: controller.hasSelection.value &&
+                    !controller.saveButtonLock.value
+                ? () async => await _saveSelectedBooks(context)
+                : null,
+          ),
         ),
-        IconButton(
-          color: theme.colorScheme.primary,
-          icon: const Icon(Icons.delete),
-          tooltip: AppLocalizations.of(context)!.deleteBooks,
-          onPressed: _multiSelectedBookId.isNotEmpty
-              ? () async => await _deleteSelectedBooks()
-              : null,
+        Obx(
+          () => IconButton(
+            color: theme.colorScheme.primary,
+            icon: const Icon(Icons.delete),
+            tooltip: AppLocalizations.of(context)!.deleteBooks,
+            onPressed: controller.hasSelection.value
+                ? () async => await _deleteSelectedBooks(context)
+                : null,
+          ),
         ),
         const SizedBox(width: 12),
       ],
     );
   }
 
-  Widget _buildStatusBar() {
-    final booksController = Get.find<BooksController>();
-    final length = booksController.length;
+  Widget _buildStatusBar(BuildContext context) {
+    final controller = Get.find<BooksPageController>();
     return Padding(
       padding: const EdgeInsets.only(left: 12, right: 12),
       child: Column(
@@ -745,16 +807,20 @@ class _BooksPageState extends State<BooksPage> {
             color: Colors.grey,
           ),
           Row(children: [
-            if (_multiSelectedBookId.isNotEmpty) ...[
-              Text(
-                AppLocalizations.of(context)!
-                    .booksSelected(_multiSelectedBookId.length, length),
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ] else ...[
-              Text(AppLocalizations.of(context)!.totalBooks(length),
-                  style: Theme.of(context).textTheme.labelSmall),
-            ]
+            Obx(() {
+              final booksController = Get.find<BooksController>();
+              final length = booksController.books.length;
+              if (controller.selectedNum.value != 0) {
+                return Text(
+                  AppLocalizations.of(context)!
+                      .booksSelected(controller.selectedNum, length),
+                  style: Theme.of(context).textTheme.labelSmall,
+                );
+              } else {
+                return Text(AppLocalizations.of(context)!.totalBooks(length),
+                    style: Theme.of(context).textTheme.labelSmall);
+              }
+            })
           ])
         ],
       ),
@@ -764,9 +830,10 @@ class _BooksPageState extends State<BooksPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final controller = Get.put(BooksPageController());
     return AppPage(
       child: Scaffold(
-          appBar: _buildAppBar(),
+          appBar: _buildAppBar(context),
           body: Row(
             children: [
               Flexible(
@@ -783,19 +850,21 @@ class _BooksPageState extends State<BooksPage> {
               const SizedBox(width: 12),
               Flexible(
                 flex: 5,
-                child: _buildBookDetail(),
+                child: _buildBookDetail(context),
               ),
               const SizedBox(width: 12),
             ],
           ),
-          bottomNavigationBar: _buildStatusBar(),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: _addButtonEnabled
-                ? theme.colorScheme.primary
-                : theme.colorScheme.primary.withOpacity(0.2),
-            onPressed: _addButtonEnabled ? () async => await _addBooks() : null,
-            child: const Icon(Icons.add),
-          )),
+          bottomNavigationBar: _buildStatusBar(context),
+          floatingActionButton: Obx(() => FloatingActionButton(
+                backgroundColor: !controller.addButtonLock.value
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.primary.withOpacity(0.2),
+                onPressed: !controller.addButtonLock.value
+                    ? () async => await _addBooks(context)
+                    : null,
+                child: const Icon(Icons.add),
+              ))),
     );
   }
 }

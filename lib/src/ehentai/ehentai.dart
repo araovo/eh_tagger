@@ -47,13 +47,13 @@ class EHentai with EHentaiNetworkHandler {
     String? title,
     List<String>? authors,
     Map<String, dynamic>? identifiers,
-    String ehentaiUrl = '',
+    String eHentaiUrl = '',
     required int id,
   }) async {
-    if (ehentaiUrl.isNotEmpty) {
-      final gidlist = getGidlist(ehentaiUrl);
+    if (eHentaiUrl.isNotEmpty) {
+      final gidlist = getGidlist(eHentaiUrl);
       if (gidlist == null) {
-        throw Exception('Failed to get gidlist: $ehentaiUrl');
+        throw Exception('Failed to get gidlist: $eHentaiUrl');
       }
       try {
         await getAllDetails(gidlist, title, id);

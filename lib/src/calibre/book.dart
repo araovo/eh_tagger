@@ -16,6 +16,8 @@ import 'package:path/path.dart';
 
 class Book {
   int id;
+  final selected = false.obs;
+  final tapped = false.obs;
   String dir = '';
   String path = '';
   String coverPath = '';
