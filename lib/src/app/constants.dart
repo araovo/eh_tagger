@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 const packageName = 'com.araovo.eh-tagger';
-const appVersion = 'v1.0.0+1';
+const appVersion = 'v1.1.0+3';
 const configFileName = 'config.json';
 const dbFileName = 'app.sqlite';
 const transDbFileName = 'ehTagTrans.sqlite';
