@@ -68,9 +68,10 @@ mixin EHentaiNetworkHandler {
     if (!useCookie) {
       logs.info('Disabling cookie for download tasks');
       dio.options.headers.remove('Cookie');
-    }
-    if (ipbMemberId.isEmpty || ipbPassHash.isEmpty || igneous.isEmpty) {
-      throw Exception('Cookies are required');
+    } else {
+      if (ipbMemberId.isEmpty || ipbPassHash.isEmpty || igneous.isEmpty) {
+        throw Exception('Cookies are required');
+      }
     }
     logs.info('Using cookie for download tasks');
     cookies.addAll([
