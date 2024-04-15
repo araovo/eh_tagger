@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:eh_tagger/src/app/books.dart';
 import 'package:eh_tagger/src/calibre/book.dart';
+import 'package:eh_tagger/src/calibre/opf.dart';
 import 'package:eh_tagger/src/database/dao/books.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -90,6 +91,7 @@ class _EditDialogState extends State<EditDialog> {
         });
       }
       await booksDao.updateBook(_currentBook);
+      OpfHandler.saveOpf(_currentBook);
       setState(() {
         _isModified = false;
       });
