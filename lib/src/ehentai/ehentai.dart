@@ -99,7 +99,11 @@ class EHentai with EHentaiNetworkHandler {
     if (metadataMap.isEmpty) return;
     for (final id in metadataMap.keys) {
       if (metadataMap[id] == null) continue;
-      await TranslateExtension.translate(transDb, metadataMap[id]!);
+      try {
+        await TranslateExtension.translate(transDb, metadataMap[id]!);
+      } catch (_) {
+        rethrow;
+      }
     }
   }
 }

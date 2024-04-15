@@ -64,6 +64,10 @@ extension TranslateExtension on CalibreMetadata {
 
     if (metadata.tags != null) {
       for (final tag in metadata.tags!) {
+        if (!tag.contains(":")) {
+          tranTag.add(tag);
+          continue;
+        }
         final tagList = tag.split(":");
         final tableName = getTableName(tagList);
         final comment = "SELECT name from rows WHERE raw like '$tableName'";
